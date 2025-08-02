@@ -36,7 +36,7 @@
 
 ※１※２のアルゴリズムについて  
 **ダイクストラ法の詳細**
-![ダイクストラ法の説明画像](https://github.com/YagamiFes-IT/TaskProgram/edit/main/image_dijkstra.jpg)
+![ダイクストラ法の説明画像](image_dijkstra.jpg)
 ## 更新履歴
 
 - 2025/08/02: リポジトリ立ち上げ
