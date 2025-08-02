@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Point>
+  <Key>12-102</Key>
+  <Name>12-102教室</Name>
+  <Group>12</Group>
+  <Objects>
+    <Object CategoryKey="Desk" From="20" To="5" />
+    <Object CategoryKey="Chair" From="20" To="2" />
+    <Object CategoryKey="Lectern" From="1" To="1" />
+  </Objects>
+</Point>

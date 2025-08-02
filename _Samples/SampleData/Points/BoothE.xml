@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Point>
+  <Key>BoothE</Key>
+  <Name>模擬店東</Name>
+  <Objects>
+    <Object CategoryKey="Desk" From="0" To="2" />
+    <Object CategoryKey="Chair" From="0" To="3" />
+    <Object CategoryKey="Lectern" From="0" To="1" />
+  </Objects>
+</Point>

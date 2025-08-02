@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Point>
+  <Key>Yard</Key>
+  <Name>保管場所</Name>
+  <Objects>
+    <Object CategoryKey="Desk" From="0" To="36" />
+    <Object CategoryKey="Chair" From="0" To="10" />
+  </Objects>
+</Point>

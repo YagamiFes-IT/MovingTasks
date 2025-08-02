@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ObjectCollection>
+  <Categories>
+    <ObjectCategory Key="Desk" Name="机" />
+    <ObjectCategory Key="Chair" Name="椅子" />
+    <ObjectCategory Key="Lectern" Name="教卓" />
+  </Categories>
+</ObjectCollection>
