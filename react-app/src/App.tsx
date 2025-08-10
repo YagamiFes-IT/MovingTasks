@@ -3,28 +3,34 @@ import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import { HomePage } from "./pages/HomePage.tsx";
 import { MasterPage } from "./pages/MasterPage";
-
-const navStyle: React.CSSProperties = {
-  padding: "10px",
-  borderBottom: "1px solid #ccc",
-  marginBottom: "20px",
-};
+import { ServicePage } from "./pages/ServicePage";
+import "./App.css";
 
 function App() {
   return (
     <div>
-      {/* 全ページ共通のナビゲーション */}
-      <nav style={navStyle}>
-        <Link to="/" style={{ marginRight: "15px" }}>
-          ホーム
-        </Link>
-        <Link to="/master">マスタ管理</Link>
+      <nav className="app-nav">
+        <div className="nav-main-links">
+          <Link to="/" className="nav-link nav-link-main">
+            ホーム
+          </Link>
+          <Link to="/service" className="nav-link nav-link-main">
+            業務データ編集
+          </Link>
+        </div>
+
+        <div>
+          <Link to="/master" className="nav-link nav-link-sub">
+            マスタ管理
+          </Link>
+        </div>
       </nav>
 
       {/* URLに応じて表示するページを切り替える */}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/master" element={<MasterPage />} />
+        <Route path="/service" element={<ServicePage />} />
       </Routes>
     </div>
   );

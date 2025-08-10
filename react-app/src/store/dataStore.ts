@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { Data } from "../services/dataLoader";
-import { ObjectCategory, GraphNode, Path, Group, Point, Waypoint } from "../types/entities";
+import { ObjectCategory, GraphNode, Path, Group, Point, Waypoint, QuantityChange } from "../types/entities";
 import { createCanonicalPathKey } from "../utils/pathUtils"; // ★ pathUtilsをインポート
 
 // import type { Path } from "../types/entities";
@@ -39,6 +39,8 @@ interface AppState {
   deleteGroup: (groupKey: string) => void;
 
   createNewProject: () => void;
+
+  updatePointObjectQuantity: (pointKey: string, categoryKey: string, from: number, to: number) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -403,4 +405,35 @@ export const useAppStore = create<AppState>((set) => ({
     // 生成した空のデータをストアにセット
     set({ data: emptyData, isLoading: false, error: null });
   },
+  updatePointObjectQuantity: (pointKey, categoryKey, from, to) =>
+    set((state) => {
+      if (!state.data) return {};
+
+      const newPoints = new Map(state.data.points);
+      const targetPoint = newPoints.get(pointKey);
+      const targetCategory = state.data.objectCategories.get(categoryKey);
+
+      if (!targetPoint || !targetCategory) {
+        console.error("Point or Category not found for update");
+        return {};
+      }
+
+      // イミュータブル（不変性）を保つため、新しいMapとQuantityChangeで置き換える
+      const newObjects = new Map(targetPoint.objects);
+      const newQuantityChange = new QuantityChange(from, to);
+      newObjects.set(targetCategory, newQuantityChange);
+
+      const newPoint = new Point(targetPoint.key, targetPoint.name, targetPoint.groupKey, targetPoint.x, targetPoint.y, newObjects);
+      newPoints.set(pointKey, newPoint);
+
+      return {
+        data: new Data(
+          new Map(state.data.objectCategories),
+          new Map(state.data.groups),
+          newPoints, // ★ 今回更新したPointsのマップ
+          new Map(state.data.waypoints),
+          new Map(state.data.paths)
+        ),
+      };
+    }),
 }));

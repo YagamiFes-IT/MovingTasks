@@ -11,12 +11,17 @@ import { createCanonicalPathKey } from "../../utils/pathUtils";
 
 type CircleNodeData = {
   label: string;
+  nodeType: "point" | "waypoint"; // ★ 'point'か'waypoint'かのタイプ情報
 };
 
 const CircleNode = ({ data, selected }: NodeProps<CircleNodeData>) => {
+  const size = data.nodeType === "point" ? 100 : 60; // Pointは100px, Waypointは60px
+  const baseBorderColor = data.nodeType === "point" ? "#1a192b" : "#888";
+  const baseBackgroundColor = data.nodeType === "point" ? "#fff" : "#f0f0f0"; // Waypointは薄い灰色に
+
   const borderStyle = selected
     ? "3px solid #007bff" // 選択されている場合は青い太枠
-    : "2px solid #1a192b"; // 通常時は黒い枠
+    : `2px solid ${baseBorderColor}`; // 通常時は黒い枠
 
   const handleStyle: React.CSSProperties = {
     width: 1,
@@ -46,19 +51,20 @@ const CircleNode = ({ data, selected }: NodeProps<CircleNodeData>) => {
 
       <div
         style={{
-          width: 100,
-          height: 100,
+          width: size,
+          height: size,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           borderRadius: "50%",
-          backgroundColor: "#fff",
+          backgroundColor: baseBackgroundColor,
           textAlign: "center",
           padding: "5px",
           boxSizing: "border-box",
           position: "relative",
           border: borderStyle, // ★ 3. 動的なスタイルを適用
           transition: "border 0.1s ease-in-out", // B. スムーズに変化させる（任意）
+          fontSize: data.nodeType === "point" ? "1em" : "0.7em", // Waypointの文字も少し小さく
         }}
       >
         {data.label}
@@ -78,21 +84,38 @@ export function GraphEditor() {
   // ★ インスペクター連携のため、選択中のエッジ情報をストアで管理する想定
   const setSelectedEdgePairKey = useAppStore((state) => state.setSelectedEdgePairKey);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // ★ 変更点1: エッジ生成ロジックを全面的に修正
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!data) return { initialNodes: [], initialEdges: [] };
 
-    const pointsAndWaypoints = [...data.points.values(), ...data.waypoints.values()];
+    const points = Array.from(data.points.values());
+    const waypoints = Array.from(data.waypoints.values());
 
-    const nodes: Node[] = pointsAndWaypoints.map((node) => ({
+    // PointとWaypointを別々にmapして、後で結合する
+    const pointNodes: Node<CircleNodeData>[] = points.map((node) => ({
       id: node.key,
       type: "circle",
       position: { x: node.x, y: node.y },
-      data: { label: "name" in node ? node.name : `(W) ${node.key}` },
+      data: {
+        label: node.name,
+        nodeType: "point", // ★ 4. タイプ情報をデータに追加
+      },
     }));
+
+    const waypointNodes: Node<CircleNodeData>[] = waypoints.map((node) => ({
+      id: node.key,
+      type: "circle",
+      position: { x: node.x, y: node.y },
+      data: {
+        label: `${node.key}`,
+        nodeType: "waypoint", // ★ 4. タイプ情報をデータに追加
+      },
+    }));
+
+    const initialNodes = [...pointNodes, ...waypointNodes];
 
     const finalEdges: Edge[] = Array.from(data.paths.values()).map((path) => {
       const edgeId = `e-${path.from.key}-${path.to.key}`;
@@ -104,7 +127,7 @@ export function GraphEditor() {
       };
     });
 
-    return { initialNodes: nodes, initialEdges: finalEdges };
+    return { initialNodes: initialNodes, initialEdges: finalEdges };
   }, [data]);
 
   useEffect(() => {

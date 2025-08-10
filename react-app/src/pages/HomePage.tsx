@@ -1,7 +1,6 @@
 // src/pages/HomePage.tsx
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../store/dataStore"; // 作成したストアをインポート
 import { loadDataFromZip } from "../services/dataLoader";
 import { DataDisplay } from "../components/DataDisplay"; // 前回作成したコンポーネント
@@ -10,7 +9,6 @@ import { exportDataToZip } from "../services/dataExporter";
 export function HomePage() {
   // ストアから状態とアクションを取得
   const { data, isLoading, error, setLoading, setData, setError, createNewProject } = useAppStore();
-  const navigate = useNavigate(); // ページ遷移のためのフック
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -22,9 +20,6 @@ export function HomePage() {
       const loadedData = await loadDataFromZip(file);
       setData(loadedData); // ストアに「読み込み成功とデータ」を通知
       console.log("Successfully loaded data:", loadedData);
-
-      // 読み込み成功後、自動的にマスタ管理ページに遷移
-      navigate("/master");
     } catch (e) {
       const message = e instanceof Error ? e.message : "An unknown error occurred.";
       setError(message); // ストアに「エラー発生」を通知
@@ -32,7 +27,6 @@ export function HomePage() {
   };
   const handleNewProject = () => {
     createNewProject(); // ストアに空のデータを作成させる
-    navigate("/master"); // 編集ページへ遷移
   };
   const handleExport = () => {
     if (data) {
@@ -60,17 +54,18 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* ストアの状態に応じてUIを切り替え */}
-      {isLoading && <p>Loading...</p>}
-      {error && <p style={{ color: "red" }}>Error: {error}</p>}
+      {isLoading && <p style={{ marginTop: "20px" }}>Loading...</p>}
+      {error && <p style={{ color: "red", marginTop: "20px" }}>Error: {error}</p>}
 
-      {/* データが正常に読み込まれたら内容を表示 */}
       {data && (
-        <div>
-          <h2>Upload Successful!</h2>
-          <button onClick={handleExport} style={{ padding: "8px 16px" }}>
-            Export Edited Data to ZIP
-          </button>
+        <div style={{ marginTop: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            {/* ★ タイトルをより分かりやすく変更 */}
+            <h2>Current Data Loaded / Preview</h2>
+            <button onClick={handleExport} style={{ padding: "8px 16px" }}>
+              Export to ZIP
+            </button>
+          </div>
           <DataDisplay data={data} />
         </div>
       )}
