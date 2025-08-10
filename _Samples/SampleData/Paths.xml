@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PathCollection>
   <Waypoints>
-    <Waypoint Key="11" />
-    <Waypoint Key="12E" />
-    <Waypoint Key="12W" />
+    <Waypoint Key="11" GroupKey="Building11"/>
+    <Waypoint Key="12E" GroupKey="Building12-1F"/>
+    <Waypoint Key="12W" GroupKey="Building12-2F"/>
   </Waypoints>
   <Paths>
     <Path Point1Key="11-21" Point2Key="11" Cost="4" OppositeCost="3" />
