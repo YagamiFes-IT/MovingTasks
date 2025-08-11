@@ -52,12 +52,7 @@ export abstract class GraphNode {
   x: number;
   y: number;
 
-  protected constructor(
-    key: string,
-    groupKey: string,
-    x: number = 0,
-    y: number = 0
-  ) {
+  protected constructor(key: string, groupKey: string, x: number = 0, y: number = 0) {
     this.key = key;
     this.groupKey = groupKey;
     this.x = x;
@@ -77,14 +72,7 @@ export class Point extends GraphNode {
   /** この拠点で数量が変化する物品とその内容のマップ */
   readonly objects: ReadonlyMap<ObjectCategory, QuantityChange>;
 
-  constructor(
-    key: string,
-    name: string,
-    groupKey: string,
-    x: number = 0,
-    y: number = 0,
-    objects: Map<ObjectCategory, QuantityChange>
-  ) {
+  constructor(key: string, name: string, groupKey: string, x: number = 0, y: number = 0, objects: Map<ObjectCategory, QuantityChange>) {
     super(key, groupKey, x, y);
     this.name = name;
     this.objects = objects;
@@ -146,19 +134,28 @@ export class Path {
   /** 通行禁止の経路かどうかのフラグ */
   isProhibited: boolean;
 
-  constructor(
-    from: GraphNode,
-    to: GraphNode,
-    cost: number,
-    opposite_cost: number,
-    isInternal: boolean = false,
-    isProhibited: boolean = false
-  ) {
+  constructor(from: GraphNode, to: GraphNode, cost: number, opposite_cost: number, isInternal: boolean = false, isProhibited: boolean = false) {
     this.from = from;
     this.to = to;
     this.cost = cost;
     this.opposite_cost = opposite_cost;
     this.isInternal = isInternal;
     this.isProhibited = isProhibited;
+  }
+}
+
+export class Route {
+  public readonly key: string; // 例: "startNodeKey_endNodeKey"
+  public readonly from: string; // 開始ノードキー
+  public readonly to: string; // 終了ノードキー
+  public readonly distance: number;
+  public readonly nodeKeys: readonly string[]; // 経由するノードキーの配列
+
+  constructor(from: string, to: string, distance: number, nodeKeys: string[]) {
+    this.key = `${from}_${to}`;
+    this.from = from;
+    this.to = to;
+    this.distance = distance;
+    this.nodeKeys = nodeKeys;
   }
 }

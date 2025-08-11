@@ -1,6 +1,6 @@
 // src/pages/MasterPage.tsx
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useAppStore } from "../store/dataStore";
 import { Link } from "react-router-dom";
 import { ObjectEditor } from "../components/editor/ObjectEditor.tsx"; // これから作成
@@ -62,7 +62,7 @@ export function MasterPage() {
             </div>
 
             {/* 右側：データインスペクター（固定幅） */}
-            <div style={{ width: "550px", minWidth: "350px" }}>
+            <div style={{ width: "565px", minWidth: "350px" }}>
               <DataInspector />
             </div>
           </div>

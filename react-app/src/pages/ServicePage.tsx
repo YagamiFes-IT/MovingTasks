@@ -1,6 +1,6 @@
 // src/pages/ServicePage.tsx
 
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAppStore } from "../store/dataStore";
 import { Link } from "react-router-dom";
 import { ServiceMap } from "../components/editor/ServiceMap";

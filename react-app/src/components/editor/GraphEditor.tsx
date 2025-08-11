@@ -1,6 +1,6 @@
 // src/components/editor/GraphEditor.tsx
 
-import React, { useMemo, useEffect, useCallback } from "react";
+import { useMemo, useEffect, useCallback } from "react";
 import ReactFlow, { Background, BackgroundVariant, Controls, useNodesState, useEdgesState, Handle, Position } from "reactflow";
 // 修正点1: 型のインポートを分離
 import type { Node, Edge, EdgeMouseHandler, NodeProps } from "reactflow";
@@ -146,7 +146,7 @@ export function GraphEditor() {
   }, [nodes, updateAllNodePositions]);
 
   const handleEdgeClick: EdgeMouseHandler = useCallback(
-    (event, edge) => {
+    (_event, edge) => {
       // 'e-' プレフィックスを削除して、ストアで管理しているペアキーを取得
       const pairKey = edge.id.replace("e-", "");
       // ストアのアクションを呼び出して、選択されたエッジのキーをセット

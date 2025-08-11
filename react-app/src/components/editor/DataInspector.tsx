@@ -1,6 +1,6 @@
 // src/components/editor/DataInspector.tsx
 
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useAppStore } from "../../store/dataStore";
 import { GraphNode, Group } from "../../types/entities";
 import { EditNodeModal } from "./EditNodeModal"; // EditNodeModalをインポート

@@ -1,6 +1,5 @@
 // src/pages/HomePage.tsx
 
-import React from "react";
 import { useAppStore } from "../store/dataStore"; // 作成したストアをインポート
 import { loadDataFromZip } from "../services/dataLoader";
 import { DataDisplay } from "../components/DataDisplay"; // 前回作成したコンポーネント

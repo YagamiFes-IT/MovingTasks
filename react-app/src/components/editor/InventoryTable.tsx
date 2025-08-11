@@ -1,6 +1,6 @@
 // src/components/editor/InventoryTable.tsx
 
-import React, { useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { Data } from "../../services/dataLoader";
 import { useAppStore } from "../../store/dataStore";
 import "../../pages/ServicePage.css";

@@ -1,6 +1,6 @@
 // src/components/editor/ServiceMap.tsx
 
-import React, { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 // ★ 1. Controlsを追加でインポート
 import ReactFlow, { Background, Handle, Position, Controls, useReactFlow, ReactFlowProvider } from "reactflow";
 import type { Node, Edge, NodeProps, NodeMouseHandler } from "reactflow";
@@ -20,25 +20,29 @@ type ServiceNodeData = {
   name: string;
   from: number;
   to: number;
+  isWaypoint: boolean;
 };
 
 // --- カスタムノードコンポーネント ---
 const ServiceNode = ({ data, selected }: NodeProps<ServiceNodeData>) => {
   // 動的なスタイルをコンポーネント内で定義
+  const size = data.isWaypoint ? 30 : 75;
+  const fontS = data.isWaypoint ? "0.5em" : "0.9em";
+  const baseBackgroundColor = data.isWaypoint ? "#f0f0f0" : "#fff"; // Waypointは薄い灰色に
   const nodeStyle: React.CSSProperties = {
-    width: 75,
-    height: 75,
+    width: size,
+    height: size,
     padding: 10,
     border: selected ? "3px solid #007bff" : "2px solid #1a192b",
     boxShadow: selected ? "0 0 10px rgba(0,0,255,0.3)" : "none",
     borderRadius: "50%",
-    background: "white",
+    background: baseBackgroundColor,
     textAlign: "center",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    fontSize: "0.9em",
+    fontSize: fontS,
     position: "relative",
     transition: "all 0.15s ease-in-out",
   };
@@ -52,9 +56,11 @@ const ServiceNode = ({ data, selected }: NodeProps<ServiceNodeData>) => {
       <Handle type="source" position={Position.Top} style={handleStyle} />
       <Handle type="target" position={Position.Top} style={handleStyle} />
       <div style={nameStyle}>{data.name}</div>
-      <div style={quantityStyle}>
-        {data.from} → {data.to}
-      </div>
+      {!data.isWaypoint && (
+        <div style={quantityStyle}>
+          {data.from} → {data.to}
+        </div>
+      )}
     </div>
   );
 };
@@ -70,7 +76,7 @@ function Flow(props: ServiceMapProps) {
 
     const selectedCategory = data.objectCategories.get(selectedCategoryKey || "");
 
-    const nodesForMap: Node<ServiceNodeData>[] = Array.from(data.points.values()).map((point) => {
+    const pointNodes: Node<ServiceNodeData>[] = Array.from(data.points.values()).map((point) => {
       const quantity = selectedCategory ? point.objects.get(selectedCategory) : null;
       return {
         id: point.key,
@@ -81,9 +87,26 @@ function Flow(props: ServiceMapProps) {
           name: point.name,
           from: quantity?.fromAmount ?? 0,
           to: quantity?.toAmount ?? 0,
+          isWaypoint: false,
         },
       };
     });
+    const waypointNodes: Node<ServiceNodeData>[] = Array.from(data.waypoints.values()).map((waypoint) => {
+      return {
+        id: waypoint.key,
+        type: "serviceNode",
+        position: { x: waypoint.x, y: waypoint.y },
+        selected: waypoint.key === focusedNodeKey,
+        data: {
+          name: waypoint.key, // Waypointにはnameがないのでkeyを表示
+          from: 0, // 在庫情報はない
+          to: 0,
+          isWaypoint: true, // Waypointであるフラグ
+        },
+      };
+    });
+
+    const nodesForMap = [...pointNodes, ...waypointNodes];
 
     const edgesForMap: Edge[] = Array.from(data.paths.values()).map((path) => ({
       id: `e-${path.from.key}-${path.to.key}`,
@@ -106,7 +129,7 @@ function Flow(props: ServiceMapProps) {
   }, [focusedNodeKey, fitView]);
 
   const handleNodeClick: NodeMouseHandler = useCallback(
-    (event, node) => {
+    (_event, node) => {
       onNodeClick(node.id);
     },
     [onNodeClick]

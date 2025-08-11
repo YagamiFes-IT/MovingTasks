@@ -1,6 +1,6 @@
 // src/components/editor/EditNodeModal.tsx
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 // ★ 1. Groupをインポート
 import { GraphNode, Point, Group } from "../../types/entities";
 import "./DataInspector.css";

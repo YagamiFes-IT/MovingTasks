@@ -1,6 +1,6 @@
 // src/components/editor/EditGroupModal.tsx
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Group } from "../../types/entities";
 import "./DataInspector.css";
 
