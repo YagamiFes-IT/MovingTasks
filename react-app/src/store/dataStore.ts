@@ -7,6 +7,19 @@ import { createCanonicalPathKey } from "../utils/pathUtils"; // ★ pathUtilsを
 
 // import type { Path } from "../types/entities";
 
+interface RouteResult {
+  supplyNode: string;
+  demandNode: string;
+  amount: number;
+  cost?: number; // costはオプショナルにしておく
+}
+
+interface SolverResponse {
+  status: string;
+  totalCost: number | null;
+  routes: RouteResult[];
+}
+
 interface AppState {
   data: Data | null;
   isLoading: boolean;
@@ -45,15 +58,23 @@ interface AppState {
   createNewProject: () => void;
 
   updatePointObjectQuantity: (pointKey: string, categoryKey: string, from: number, to: number) => void;
+
+  isSolving: boolean; // 計算中かどうかを示すフラグ
+  solverResult: SolverResponse | null; // 計算結果を保持
+
+  // ★★★ 追加3: 新しいアクションの型定義 ★★★
+  solveTransportationProblem: (targetObjectCategoryKey: string, taskPenalty: number) => Promise<void>;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   // --- 初期状態 ---
   data: null,
   isLoading: false,
   error: null,
   selectedEdgePairKey: null,
   isRouteStale: false,
+  isSolving: false,
+  solverResult: null,
 
   // --- 状態管理系アクション ---
 
@@ -359,4 +380,68 @@ export const useAppStore = create<AppState>((set) => ({
         isRouteStale: false,
       };
     }),
+  solveTransportationProblem: async (targetObjectCategoryKey, taskPenalty) => {
+    set({ isSolving: true, error: null, solverResult: null });
+
+    try {
+      const currentData = get().data;
+      if (!currentData) {
+        throw new Error("データがロードされていません。");
+      }
+
+      // --- ▼▼▼ ここからが修正箇所 ▼▼▼ ---
+
+      const pointsForApi = Array.from(currentData.points.values()).reduce((acc, point) => {
+        const newObjects = Array.from(point.objects.entries()).reduce((objAcc, [category, quantityChange]) => {
+          objAcc[category.key] = quantityChange;
+          return objAcc;
+        }, {} as { [key: string]: QuantityChange });
+
+        // ★ 修正1: newPointから型定義を削除
+        const newPoint = {
+          ...point,
+          objects: newObjects,
+        };
+
+        acc[point.key] = newPoint;
+        return acc;
+
+        // ★ 修正2: PlainPointの代わりにanyを使用する (objectでも可)
+      }, {} as { [key: string]: object });
+
+      // --- ▲▲▲ 修正箇所ここまで ▲▲▲ ---
+
+      const problemData = {
+        objectCategories: Object.fromEntries(currentData.objectCategories.entries()),
+        points: pointsForApi,
+        routes: Object.fromEntries(currentData.routes.entries()),
+        taskPenalty: taskPenalty,
+        targetObjectCategoryKey: targetObjectCategoryKey,
+      };
+
+      console.log("APIに送信するデータ:", JSON.stringify(problemData, null, 2));
+      // ★★★ 修正箇所ここまで ★★★
+
+      // 3. APIを呼び出し (この部分は変更なし)
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${apiUrl}/solve-dynamic-problem`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(problemData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail || "APIリクエストに失敗しました");
+      }
+
+      const result: SolverResponse = await response.json();
+      set({ solverResult: result, isSolving: false });
+      toast.success("計算が完了しました！");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "予期せぬエラーが発生しました。";
+      set({ error: errorMessage, isSolving: false });
+      toast.error(errorMessage);
+    }
+  },
 }));

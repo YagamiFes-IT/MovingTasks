@@ -12,6 +12,7 @@ import {
   Group,
   Path,
   Route,
+  Task,
 } from "../types/entities.ts"; // パスはプロジェクトに合わせて修正してください
 import { FileFormatError, parseXml, findXmlElement, toInt, toBool } from "../utils/xmlUtils.ts"; // パスはプロジェクトに合わせて修正してください
 
@@ -21,6 +22,7 @@ const FILENAME_GROUPS = "Groups.xml";
 const FILENAME_OBJECTS = "Objects.xml";
 const FILENAME_PATHS = "Paths.xml";
 const FILENAME_ROUTES = "Routes.xml"; // ファイル名を定数化
+const FILENAME_TASKS = "Tasks.xml";
 /** Pathを格納するMapのキー。'fromKey->toKey'の形式。 */
 type PathKey = string;
 
@@ -34,39 +36,124 @@ export class Data {
   public readonly waypoints: ReadonlyMap<string, Waypoint>;
   public readonly paths: ReadonlyMap<PathKey, Path>;
   public readonly routes: ReadonlyMap<string, Route>;
+  public readonly tasks: ReadonlyMap<string, Task>;
 
-  constructor(objectCategories: ReadonlyMap<string, ObjectCategory>, groups: ReadonlyMap<string, Group>, points: ReadonlyMap<string, Point>, waypoints: ReadonlyMap<string, Waypoint>, paths: ReadonlyMap<string, Path>, routes: ReadonlyMap<string, Route> = new Map()) {
+  constructor(
+    objectCategories: ReadonlyMap<string, ObjectCategory>,
+    groups: ReadonlyMap<string, Group>,
+    points: ReadonlyMap<string, Point>,
+    waypoints: ReadonlyMap<string, Waypoint>,
+    paths: ReadonlyMap<string, Path>,
+    routes: ReadonlyMap<string, Route> = new Map(),
+    tasks: ReadonlyMap<string, Task> = new Map()
+  ) {
     this.objectCategories = objectCategories;
     this.groups = groups;
     this.points = points;
     this.waypoints = waypoints;
     this.paths = paths;
     this.routes = routes;
+    this.tasks = tasks;
   }
 
   public withNewObjectCategories(newMap: ReadonlyMap<string, ObjectCategory>): Data {
-    return new Data(newMap, this.groups, this.points, this.waypoints, this.paths, this.routes);
+    return new Data(newMap, this.groups, this.points, this.waypoints, this.paths, this.routes, this.tasks);
   }
 
   public withNewGroups(newMap: ReadonlyMap<string, Group>): Data {
-    return new Data(this.objectCategories, newMap, this.points, this.waypoints, this.paths, this.routes);
+    return new Data(this.objectCategories, newMap, this.points, this.waypoints, this.paths, this.routes, this.tasks);
   }
 
   public withNewPoints(newMap: ReadonlyMap<string, Point>): Data {
-    return new Data(this.objectCategories, this.groups, newMap, this.waypoints, this.paths, this.routes);
+    return new Data(this.objectCategories, this.groups, newMap, this.waypoints, this.paths, this.routes, this.tasks);
   }
 
   public withNewWaypoints(newMap: ReadonlyMap<string, Waypoint>): Data {
-    return new Data(this.objectCategories, this.groups, this.points, newMap, this.paths, this.routes);
+    return new Data(this.objectCategories, this.groups, this.points, newMap, this.paths, this.routes, this.tasks);
   }
 
   public withNewPaths(newMap: ReadonlyMap<string, Path>): Data {
-    return new Data(this.objectCategories, this.groups, this.points, this.waypoints, newMap, this.routes);
+    return new Data(this.objectCategories, this.groups, this.points, this.waypoints, newMap, this.routes, this.tasks);
   }
 
   public withNewRoutes(newMap: ReadonlyMap<string, Route>): Data {
-    return new Data(this.objectCategories, this.groups, this.points, this.waypoints, this.paths, newMap);
+    return new Data(this.objectCategories, this.groups, this.points, this.waypoints, this.paths, newMap, this.tasks);
   }
+
+  public withNewTasks(newMap: ReadonlyMap<string, Task>): Data {
+    return new Data(this.objectCategories, this.groups, this.points, this.waypoints, this.paths, this.routes, newMap);
+  }
+
+  // Dataクラスの中に追加
+
+  public getProhibitedTaskObjects(task: Task): Task[] {
+    const prohibitedTasks: Task[] = [];
+    for (const id of task.prohibitedTaskIds) {
+      const prohibitedTask = this.tasks.get(id);
+      if (prohibitedTask) {
+        prohibitedTasks.push(prohibitedTask);
+      }
+    }
+    return prohibitedTasks;
+  }
+}
+
+async function parseTasksXml(zip: JSZip, basePath: string, objectCategories: ReadonlyMap<string, ObjectCategory>): Promise<Map<string, Task>> {
+  const tasksFile = zip.file(basePath + FILENAME_TASKS);
+  const tasks = new Map<string, Task>();
+
+  if (!tasksFile) {
+    console.log("Tasks.xml not found, returning empty tasks map.");
+    return tasks;
+  }
+
+  const tasksXmlText = await tasksFile.async("string");
+  const tasksRoot = parseXml(tasksXmlText, "TaskCollection", FILENAME_TASKS);
+
+  findXmlElement(tasksRoot, "Tasks")
+    .querySelectorAll("Task")
+    .forEach((el) => {
+      const fromPoint = el.getAttribute("fromPoint");
+      const toPoint = el.getAttribute("toPoint");
+      const objectKey = el.getAttribute("objectKey");
+      const countStr = el.getAttribute("count");
+      const taskWeightStr = el.getAttribute("taskWeight"); // 読み取る値は同じ
+      const notes = el.getAttribute("notes") || "";
+
+      const prohibitedTaskIds: string[] = [];
+      const prohibitedTasksEl = el.querySelector("ProhibitedTasks");
+      if (prohibitedTasksEl) {
+        prohibitedTasksEl.querySelectorAll("ProhibitedTask").forEach((prohibitedEl) => {
+          const id = prohibitedEl.getAttribute("id");
+          if (id) {
+            prohibitedTaskIds.push(id);
+          }
+        });
+      }
+
+      if (!fromPoint || !toPoint || !objectKey || !countStr || !taskWeightStr) {
+        console.warn("Skipping task with missing attributes:", { fromPoint, toPoint, objectKey, countStr, taskWeightStr });
+        return;
+      }
+
+      const object = objectCategories.get(objectKey);
+      if (!object) {
+        console.warn(`Skipping task because objectKey "${objectKey}" was not found in objectCategories.`);
+        return;
+      }
+
+      const count = toInt(countStr, 0, FILENAME_TASKS);
+      const taskWeight = toInt(taskWeightStr, 0, FILENAME_TASKS);
+
+      if (count === 0) {
+        return;
+      }
+
+      const newTask = new Task(fromPoint, toPoint, object, count, taskWeight, notes, prohibitedTaskIds);
+      tasks.set(newTask.id, newTask);
+    });
+
+  return tasks;
 }
 
 /**
@@ -320,7 +407,6 @@ function parsePaths(pathsRoot: Element, allGraphNodes: ReadonlyMap<string, Graph
 }
 
 // src/services/dataLoader.ts
-
 export async function loadDataFromZip(zipFile: File): Promise<Data> {
   const zip = await JSZip.loadAsync(zipFile);
 
@@ -335,28 +421,26 @@ export async function loadDataFromZip(zipFile: File): Promise<Data> {
   const [groups, categories] = await Promise.all([parseGroupsXml(zip, basePath), parseObjectCategoriesXml(zip, basePath)]);
 
   // --- 3. 依存関係のあるデータを順次解析 ---
-
-  // PointはCategoryに依存
   const points = await parsePointsXml(zip, basePath, categories);
 
-  // WaypointとPathは同じファイルから解析するので、一度だけ読み込む
   const pathsFile = zip.file(basePath + FILENAME_PATHS);
   if (!pathsFile) throw new FileFormatError(FILENAME_PATHS, "ファイルが見つかりません。");
   const pathsXmlText = await pathsFile.async("string");
   const pathsRoot = parseXml(pathsXmlText, "PathCollection", FILENAME_PATHS);
 
   const waypoints = parseWaypoints(pathsRoot);
-
-  // Pathは全ノード情報に依存するため、このタイミングで作成
   const allGraphNodes = new Map([...points.entries(), ...waypoints.entries()]);
   const paths = parsePaths(pathsRoot, allGraphNodes);
 
   // --- 4. 読み込んだデータ同士の紐付け（後処理） ---
   linkNodesToGroups(groups, points, waypoints);
 
-  // --- 5. オプショナルなデータ(Routes)の解析 ---
-  const routes = await parseRoutesXml(zip, basePath);
+  // ★ 1. オプショナルなデータ(RoutesとTasks)を並列で解析 ---
+  const [routes, tasks] = await Promise.all([
+    parseRoutesXml(zip, basePath),
+    parseTasksXml(zip, basePath, categories), // categoriesを渡す
+  ]);
 
-  // --- 6. 最終的なDataオブジェクトを生成して返す ---
-  return new Data(categories, groups, points, waypoints, paths, routes);
+  // ★ 2. 最終的なDataオブジェクトにtasksを追加して返す ---
+  return new Data(categories, groups, points, waypoints, paths, routes, tasks);
 }

@@ -19,6 +19,9 @@ export const PageNav = () => {
       <NavLink to="/pathfinding" className="nav-link">
         経路計算
       </NavLink>
+      <NavLink to="/solver" className="nav-link">
+        移動表作成
+      </NavLink>
       {/* 今後、タスク運用ページなどをここに追加 */}
     </nav>
   );

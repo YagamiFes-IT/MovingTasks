@@ -159,3 +159,56 @@ export class Route {
     this.nodeKeys = nodeKeys;
   }
 }
+
+/**
+ * 最適化計算によって生成された個別の輸送タスクを表します。
+ */
+export class Task {
+  /**
+   * タスクの一意な識別子。
+   * 例: "fromPointKey_toPointKey_objectCategoryKey"
+   */
+  public readonly id: string;
+
+  /** 輸送元となる拠点のキー */
+  public readonly fromPoint: string;
+
+  /** 輸送先となる拠点のキー */
+  public readonly toPoint: string;
+
+  /** 輸送対象の備品カテゴリ */
+  public readonly object: ObjectCategory;
+
+  /** 輸送する数量 */
+  public count: number;
+
+  /** このタスクの重み（例: 経路コスト × 数量） */
+  public taskWeight: number;
+
+  /** メモ（将来的な拡張用） */
+  public notes: string;
+
+  /** このタスクと両立できないタスクのリスト（将来的な拡張用） */
+  public prohibitedTaskIds: string[];
+
+  constructor(
+    fromPoint: string,
+    toPoint: string,
+    object: ObjectCategory,
+    count: number,
+    taskWeight: number,
+    notes: string = "", // デフォルト値
+    prohibitedTaskIds: string[] = [] // デフォルト値
+  ) {
+    // 方法1（複合キー）でIDを自動生成
+    this.id = `${fromPoint}_${toPoint}_${object.key}`;
+
+    this.fromPoint = fromPoint;
+    this.toPoint = toPoint;
+    this.object = object;
+    this.count = count;
+    this.taskWeight = taskWeight;
+    this.notes = notes;
+    this.prohibitedTaskIds = prohibitedTaskIds;
+  }
+}

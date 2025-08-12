@@ -7,6 +7,7 @@ import { ProjectHubPage } from "./pages/ProjectHubPage"; // 新しいハブペ�
 import { MasterPage } from "./pages/MasterPage";
 import { ServicePage } from "./pages/ServicePage";
 import { PathfindingPage } from "./pages/PathfindingPage.tsx"; // 経路計算ページ
+import { SolverPage } from "./pages/SolverPage.tsx";
 import "./App.css";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
           <Route path="/master" element={<MasterPage />} />
           <Route path="/service" element={<ServicePage />} />
           <Route path="/pathfinding" element={<PathfindingPage />} />
+          <Route path="/solver" element={<SolverPage />} />
         </Routes>
       </main>
 

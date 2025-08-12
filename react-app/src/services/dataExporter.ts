@@ -3,7 +3,7 @@
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import type { Data } from "./dataLoader";
-import type { Group, ObjectCategory, Path, Point, Waypoint, Route } from "../types/entities";
+import type { Group, ObjectCategory, Path, Point, Waypoint, Route, Task } from "../types/entities";
 
 // --- XML生成関数群 ---
 
@@ -64,6 +64,42 @@ ${nodeEntries}
 }
 
 /**
+ * TaskのMapからTasks.xmlの文字列を生成する。
+ * @param tasks エクスポート対象のTaskのMap
+ * @returns Tasks.xmlの内容の文字列
+ */
+function generateTasksXml(tasks: ReadonlyMap<string, Task>): string {
+  const taskEntries = Array.from(tasks.values())
+    .map((task) => {
+      // prohibitedTaskIdsのリストからXML要素を生成
+      const prohibitedEntries = task.prohibitedTaskIds.map((id) => `        <ProhibitedTask id="${id}"/>`).join("\n");
+
+      // 禁止タスクがある場合のみProhibitedTasksブロックを生成
+      const prohibitedBlock =
+        task.prohibitedTaskIds.length > 0
+          ? `
+      <ProhibitedTasks>
+${prohibitedEntries}
+      </ProhibitedTasks>`
+          : "";
+
+      return `    <Task 
+      id="${task.id}" 
+      fromPoint="${task.fromPoint}" 
+      toPoint="${task.toPoint}" 
+      objectKey="${task.object.key}" 
+      count="${task.count}" 
+      taskWeight="${task.taskWeight}" 
+      notes="${task.notes}">
+${prohibitedBlock}
+    </Task>`;
+    })
+    .join("\n\n");
+
+  return `<TaskCollection>\n  <Tasks>\n${taskEntries}\n  </Tasks>\n</TaskCollection>`;
+}
+
+/**
  * 現在のDataオブジェクトをZIPファイルとしてエクスポートし、ダウンロードをトリガーする。
  * @param data エクスポート対象のDataオブジェクト
  * @param fileName ダウンロードするファイル名
@@ -75,13 +111,15 @@ export async function exportDataToZip(data: Data, fileName: string = "exported_d
   const groupsXml = generateGroupsXml(data.groups);
   const objectsXml = generateObjectsXml(data.objectCategories);
   const pathsXml = generatePathsXml(data.paths, data.waypoints);
-  const routesXml = generateRoutesXml(data.routes); // ★ routesが0件でも空のXMLを生成
+  const routesXml = generateRoutesXml(data.routes);
+  const tasksXml = generateTasksXml(data.tasks);
 
   // メインのXMLファイルをZIPに追加
   zip.file("Groups.xml", groupsXml);
   zip.file("Objects.xml", objectsXml);
   zip.file("Paths.xml", pathsXml);
-  zip.file("Routes.xml", routesXml); // ★ 条件分岐を削除し、常に追加
+  zip.file("Routes.xml", routesXml);
+  zip.file("Tasks.xml", tasksXml);
 
   // 各Pointを個別のXMLファイルとしてPoints/ディレクトリに追加
   const pointsFolder = zip.folder("Points");

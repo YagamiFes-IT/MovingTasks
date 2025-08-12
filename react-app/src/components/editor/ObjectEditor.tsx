@@ -1,6 +1,6 @@
 // src/components/editor/ObjectEditor.tsx
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useAppStore } from "../../store/dataStore"; // パスを修正
 
 export function ObjectEditor() {
@@ -41,16 +41,10 @@ export function ObjectEditor() {
         <tbody>
           {Array.from(categories.values()).map((cat) => (
             <tr key={cat.key}>
+              <td style={{ padding: 8, border: "1px solid #ddd" }}>{cat.key}</td>
+              <td style={{ padding: 8, border: "1px solid #ddd" }}>{cat.name}</td>
               <td style={{ padding: 8, border: "1px solid #ddd" }}>
-                {cat.key}
-              </td>
-              <td style={{ padding: 8, border: "1px solid #ddd" }}>
-                {cat.name}
-              </td>
-              <td style={{ padding: 8, border: "1px solid #ddd" }}>
-                <button onClick={() => deleteObjectCategory(cat.key)}>
-                  Delete
-                </button>
+                <button onClick={() => deleteObjectCategory(cat.key)}>Delete</button>
               </td>
             </tr>
           ))}
@@ -60,20 +54,8 @@ export function ObjectEditor() {
       {/* 新規追加フォーム */}
       <h4 style={{ marginTop: "30px" }}>Add New Category</h4>
       <form onSubmit={handleAdd}>
-        <input
-          type="text"
-          placeholder="Category Key (e.g., 'Chair')"
-          value={newKey}
-          onChange={(e) => setNewKey(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Category Name (e.g., '椅子')"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          required
-        />
+        <input type="text" placeholder="Category Key (e.g., 'Chair')" value={newKey} onChange={(e) => setNewKey(e.target.value)} required />
+        <input type="text" placeholder="Category Name (e.g., '椅子')" value={newName} onChange={(e) => setNewName(e.target.value)} required />
         <button type="submit">Add</button>
       </form>
     </div>
