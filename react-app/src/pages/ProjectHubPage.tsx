@@ -33,7 +33,11 @@ export const ProjectHubPage = () => {
           </Link>
           <Link to="/pathfinding" className="hub-card">
             <h2>経路計算</h2>
-            <p>最短経路を計算し、手動で調整します。</p>
+            <p>最短経路を計算します。</p>
+          </Link>
+          <Link to="/solver" className="hub-card">
+            <h2>タスク最適化</h2>
+            <p>最適タスクを生成します。</p>
           </Link>
         </div>
       )}

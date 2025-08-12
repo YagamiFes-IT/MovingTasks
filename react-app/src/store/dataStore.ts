@@ -2,7 +2,7 @@
 import { toast } from "react-hot-toast";
 import { create } from "zustand";
 import { Data } from "../services/dataLoader";
-import { ObjectCategory, Path, Group, Point, Waypoint, QuantityChange, Route } from "../types/entities";
+import { ObjectCategory, Path, Group, Point, Waypoint, QuantityChange, Route, Task } from "../types/entities";
 import { createCanonicalPathKey } from "../utils/pathUtils"; // ★ pathUtilsをインポート
 
 // import type { Path } from "../types/entities";
@@ -12,13 +12,20 @@ interface RouteResult {
   demandNode: string;
   amount: number;
   cost?: number; // costはオプショナルにしておく
+  objectKey: string;
 }
 
-interface SolverResponse {
+/** 備品カテゴリごとの計算結果 */
+interface SolverResultByCategory {
+  objectKey: string; // ★ どの備品カテゴリの結果かを示すキー
   status: string;
   totalCost: number | null;
-  routes: RouteResult[];
+  taskCount: number; // ★ タスク数を追加
+  routes: RouteResult[]; // ★ このカテゴリに属するタスクのみ
 }
+
+/** APIからのレスポンス全体の型 */
+type SolverResponse = SolverResultByCategory[]; // ★ 結果の配列になる
 
 interface AppState {
   data: Data | null;
@@ -63,7 +70,7 @@ interface AppState {
   solverResult: SolverResponse | null; // 計算結果を保持
 
   // ★★★ 追加3: 新しいアクションの型定義 ★★★
-  solveTransportationProblem: (targetObjectCategoryKey: string, taskPenalty: number) => Promise<void>;
+  solveTransportationProblem: (taskPenalty: number) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -83,7 +90,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // コンストラクタでReadonlyMapに変換するのは安全な方法。
     // routesは初期状態では空なので、空のMapを渡す。
     set({
-      data: new Data(new Map(newData.objectCategories), new Map(newData.groups), new Map(newData.points), new Map(newData.waypoints), new Map(newData.paths), newData.routes ? new Map(newData.routes) : new Map()),
+      data: new Data(new Map(newData.objectCategories), new Map(newData.groups), new Map(newData.points), new Map(newData.waypoints), new Map(newData.paths), newData.routes ? new Map(newData.routes) : new Map(), newData.tasks ? new Map(newData.tasks) : new Map()),
       isLoading: false,
       error: null,
     });
@@ -104,7 +111,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createNewProject: () => {
     // 空のMapを持つ、まっさらなDataオブジェクトを生成
-    const emptyData = new Data(new Map(), new Map(), new Map(), new Map(), new Map(), new Map());
+    const emptyData = new Data(new Map(), new Map(), new Map(), new Map(), new Map(), new Map(), new Map());
     set({ data: emptyData, isLoading: false, error: null, isRouteStale: false });
     toast.success("新しいプロジェクトが作成されました。");
   },
@@ -380,7 +387,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         isRouteStale: false,
       };
     }),
-  solveTransportationProblem: async (targetObjectCategoryKey, taskPenalty) => {
+  solveTransportationProblem: async (taskPenalty: number) => {
+    // ★ 1. taskPenaltyを引数で受け取る
     set({ isSolving: true, error: null, solverResult: null });
 
     try {
@@ -388,41 +396,55 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!currentData) {
         throw new Error("データがロードされていません。");
       }
+      // 1. 計算可能な備品カテゴリを判定
+      const solvableCategoryKeys: string[] = [];
+      for (const category of currentData.objectCategories.values()) {
+        let totalSupply = 0;
+        let totalDemand = 0;
+        for (const point of currentData.points.values()) {
+          const quantityChange = point.objects.get(category);
+          if (quantityChange) {
+            const diff = quantityChange.toAmount - quantityChange.fromAmount;
+            if (diff > 0) totalSupply += diff;
+            else if (diff < 0) totalDemand += -diff;
+          }
+        }
+        if (totalSupply > 0 && totalSupply === totalDemand) {
+          solvableCategoryKeys.push(category.key);
+        }
+      }
 
-      // --- ▼▼▼ ここからが修正箇所 ▼▼▼ ---
+      if (solvableCategoryKeys.length === 0) {
+        toast("計算可能な（需要と供給が一致する）備品がありません。");
+        set({ isSolving: false });
+        return;
+      }
 
       const pointsForApi = Array.from(currentData.points.values()).reduce((acc, point) => {
+        // point.objects (Map) をループし、キーに category.key を使った新しいオブジェクトを作成
         const newObjects = Array.from(point.objects.entries()).reduce((objAcc, [category, quantityChange]) => {
+          // categoryオブジェクト自身ではなく、category.key をキーにする
           objAcc[category.key] = quantityChange;
           return objAcc;
         }, {} as { [key: string]: QuantityChange });
 
-        // ★ 修正1: newPointから型定義を削除
-        const newPoint = {
+        // 新しいpointオブジェクトを生成
+        acc[point.key] = {
           ...point,
-          objects: newObjects,
+          objects: newObjects, // 正しく変換されたオブジェクトをセット
         };
-
-        acc[point.key] = newPoint;
         return acc;
-
-        // ★ 修正2: PlainPointの代わりにanyを使用する (objectでも可)
       }, {} as { [key: string]: object });
-
-      // --- ▲▲▲ 修正箇所ここまで ▲▲▲ ---
 
       const problemData = {
         objectCategories: Object.fromEntries(currentData.objectCategories.entries()),
         points: pointsForApi,
         routes: Object.fromEntries(currentData.routes.entries()),
-        taskPenalty: taskPenalty,
-        targetObjectCategoryKey: targetObjectCategoryKey,
+        taskPenalty: taskPenalty, // ★ UIから渡された値を使用
+        targetObjectCategoryKeys: solvableCategoryKeys, // ★ 計算対象のキーリスト
       };
 
-      console.log("APIに送信するデータ:", JSON.stringify(problemData, null, 2));
-      // ★★★ 修正箇所ここまで ★★★
-
-      // 3. APIを呼び出し (この部分は変更なし)
+      // 4. APIを呼び出す
       const apiUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${apiUrl}/solve-dynamic-problem`, {
         method: "POST",
@@ -435,9 +457,44 @@ export const useAppStore = create<AppState>((set, get) => ({
         throw new Error(errorData?.detail || "APIリクエストに失敗しました");
       }
 
-      const result: SolverResponse = await response.json();
-      set({ solverResult: result, isSolving: false });
-      toast.success("計算が完了しました！");
+      const results: SolverResponse = await response.json();
+
+      // 5. 結果を処理してTaskオブジェクトとして格納する
+      const newTasks = new Map<string, Task>();
+      let isAnyOptimal = false;
+
+      // ★ 結果の配列をループ処理
+      for (const result of results) {
+        if (result.status === "Optimal" && result.routes) {
+          isAnyOptimal = true;
+          // ★ result.routes（＝そのカテゴリのタスクリスト）をループ
+          for (const route of result.routes) {
+            const objectCategory = currentData.objectCategories.get(route.objectKey);
+            if (!objectCategory) continue;
+
+            const routeInfo = currentData.routes.get(`${route.supplyNode}_${route.demandNode}`);
+            const distance = routeInfo ? routeInfo.distance : 0;
+            const taskWeight = distance * route.amount;
+
+            const newTask = new Task(route.supplyNode, route.demandNode, objectCategory, route.amount, taskWeight);
+            newTasks.set(newTask.id, newTask);
+          }
+        }
+      }
+
+      // 1つでも最適解が見つかっていれば、タスクを更新
+      if (isAnyOptimal) {
+        const newData = currentData.withNewTasks(newTasks);
+        set({
+          data: newData,
+          solverResult: results, // ★ APIからのレスポンス全体を保存
+          isSolving: false,
+        });
+        toast.success("計算が完了し、タスクが生成されました！");
+      } else {
+        set({ solverResult: results, isSolving: false });
+        toast.error(`計算に失敗しました。`);
+      }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "予期せぬエラーが発生しました。";
       set({ error: errorMessage, isSolving: false });
