@@ -1,0 +1,65 @@
+# ----------------------------------------------------------------
+# A robust .gitignore for Vite + React + TypeScript projects
+# ----------------------------------------------------------------
+
+# 依存関係 (Dependencies)
+# `npm install` や `yarn` で再生成されるため、絶対に含めない
+node_modules/
+
+# ビルド関連 (Build & Cache)
+# Viteのビルド出力ディレクトリ
+dist/
+dist-ssr/
+
+# Viteの開発サーバー用キャッシュ
+.vite/
+
+# TypeScriptのビルドキャッシュ
+*.tsbuildinfo
+
+# pyodideのpublic中身（npm installで自動的にcopyされるのでgithub共有不要）
+public/pyodide
+
+# ログ & キャッシュ (Logs & Caches)
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ESLintのキャッシュ
+.eslintcache
+
+# テストカバレッジレポート (Vitest, Jestなど)
+coverage/
+
+# 環境変数 (Environment Variables)
+# .env.local などのローカル環境用ファイルをすべて無視する
+# (APIキーなどの秘匿情報を含むため)
+.env
+.env.*
+!.env.example
+
+# OS & エディタ設定 (OS & Editor)
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# JetBrains IDEs (WebStormなど)
+.idea/
+
+# その他
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
