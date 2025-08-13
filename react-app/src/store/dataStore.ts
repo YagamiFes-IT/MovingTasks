@@ -138,13 +138,63 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { data: state.data.withNewObjectCategories(newCategories) };
     }),
 
-  deleteObjectCategory: (key) =>
-    set((state) => {
-      if (!state.data) return {};
-      const newCategories = new Map(state.data.objectCategories);
-      newCategories.delete(key);
-      return { data: state.data.withNewObjectCategories(newCategories) };
-    }),
+  deleteObjectCategory: (keyToDelete: string) => {
+    console.log("--- 1. deleteObjectCategory アクション開始 ---", { keyToDelete });
+
+    const currentData = get().data;
+    if (!currentData) {
+      console.warn("デバッグ: currentDataが存在しないため処理を中断。");
+      return;
+    }
+
+    const categoryToDelete = currentData.objectCategories.get(keyToDelete);
+
+    if (!categoryToDelete) {
+      console.warn(`デバッグ: カテゴリキー "${keyToDelete}" が見つかりませんでした。`);
+      // toast.errorはここにあるので、もしこのメッセージが出るならtoast自体は機能している
+      toast.error(`エラー: カテゴリキー "${keyToDelete}" が見つかりません。`);
+      return;
+    }
+
+    console.log("--- 2. 削除対象のカテゴリを発見 ---", { categoryToDelete });
+
+    const newObjectCategories = new Map(currentData.objectCategories);
+    newObjectCategories.delete(keyToDelete);
+
+    const newPoints = new Map(currentData.points);
+    let pointsWereUpdated = false; // ★ ポイントが更新されたかを追跡するフラグ
+
+    for (const [pointKey, point] of newPoints.entries()) {
+      if (point.objects.has(categoryToDelete)) {
+        console.log(`--- 3. Point "${pointKey}" からカテゴリ "${keyToDelete}" を削除します ---`);
+        pointsWereUpdated = true; // ★ 更新があったことを記録
+
+        const newPointObjects = new Map(point.objects);
+        newPointObjects.delete(categoryToDelete);
+
+        const updatedPoint = new Point(point.key, point.name, point.groupKey, point.x, point.y, newPointObjects);
+        newPoints.set(pointKey, updatedPoint);
+      }
+    }
+
+    if (pointsWereUpdated) {
+      console.log("--- 4. ポイントの更新がありました ---", { newPoints });
+    } else {
+      console.log("--- 4. どのポイントにも削除対象のカテゴリはありませんでした ---");
+    }
+
+    const newData = currentData.withNewObjectCategories(newObjectCategories).withNewPoints(newPoints);
+
+    console.log("--- 5. 新しいDataオブジェクトを生成しました ---");
+
+    set({ data: newData });
+
+    console.log("--- 6. set({ data: newData }) を呼び出しました ---");
+
+    toast.success(`備品カテゴリ "${categoryToDelete.name}" を関連データごと削除しました。`);
+
+    console.log("--- 7. toast.success() が呼び出されました ---");
+  },
 
   // --- Group（グループ）系アクション ---
 

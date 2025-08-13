@@ -13,6 +13,7 @@ app = FastAPI()
 origins = [
     "http://localhost:3000", # React開発サーバーのURL
     "http://localhost:5173",
+    "https://yagamifes-it.github.io/MovingTasks",
 ]
 
 app.add_middleware(
@@ -63,6 +64,10 @@ class ProblemDataModel(BaseModel):
 
 
 # ▼▼▼ 新しいAPIエンドポイント ▼▼▼
+@app.get("/")
+def health_check():
+    """Renderのヘルスチェック用エンドポイント"""
+    return {"status": "ok"}
 
 @app.post("/solve-dynamic-problem")
 def solve_dynamic_problem(data: ProblemDataModel): # 引数でデータを受け取る
