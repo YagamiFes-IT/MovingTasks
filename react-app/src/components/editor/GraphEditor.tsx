@@ -3,11 +3,18 @@
 import { useMemo, useEffect, useCallback } from "react";
 import ReactFlow, { Background, BackgroundVariant, Controls, useNodesState, useEdgesState, Handle, Position } from "reactflow";
 // 修正点1: 型のインポートを分離
-import type { Node, Edge, EdgeMouseHandler, NodeProps } from "reactflow";
+import type { Node, Edge, EdgeMouseHandler, NodeProps, NodeDragHandler, NodeMouseHandler } from "reactflow";
 import "reactflow/dist/style.css";
 import { useAppStore } from "../../store/dataStore";
 import "./editor.css";
 import { createCanonicalPathKey } from "../../utils/pathUtils";
+
+interface GraphEditorProps {
+  selectedNodeKey: string | null;
+  onNodeSelect: (key: string | null) => void;
+  selectedPathKey: string | null;
+  onPathSelect: (key: string | null) => void;
+}
 
 type CircleNodeData = {
   label: string;
@@ -75,14 +82,11 @@ const CircleNode = ({ data, selected }: NodeProps<CircleNodeData>) => {
 
 const nodeTypes = { circle: CircleNode };
 
-export function GraphEditor() {
+export function GraphEditor({ selectedNodeKey, onNodeSelect, selectedPathKey, onPathSelect }: GraphEditorProps) {
   const data = useAppStore((state) => state.data);
   const updateAllNodePositions = useAppStore((state) => state.updateAllNodePositions);
   const deleteNodes = useAppStore((state) => state.deleteNodes);
   const deletePaths = useAppStore((state) => state.deletePaths);
-
-  // ★ インスペクター連携のため、選択中のエッジ情報をストアで管理する想定
-  const setSelectedEdgePairKey = useAppStore((state) => state.setSelectedEdgePairKey);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -131,29 +135,52 @@ export function GraphEditor() {
   }, [data]);
 
   useEffect(() => {
-    // dataStoreから来たノードとエッジを、そのままReact Flowの状態にセットするだけ
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
+    const updatedNodes = initialNodes.map((node) => ({
+      ...node,
+      selected: node.id === selectedNodeKey,
+    }));
 
-  const handleSaveLayout = useCallback(() => {
-    const newPositions = new Map<string, { x: number; y: number }>();
-    nodes.forEach((node) => {
-      newPositions.set(node.id, node.position);
-    });
-    updateAllNodePositions(newPositions);
-    alert("Layout saved!");
-  }, [nodes, updateAllNodePositions]);
+    const prefixedSelectedPathKey = selectedPathKey ? `e-${selectedPathKey}` : null;
+
+    const updatedEdges = initialEdges.map((edge) => ({
+      ...edge,
+      selected: edge.id === prefixedSelectedPathKey,
+      style: { strokeWidth: edge.id === prefixedSelectedPathKey ? 3 : 1, stroke: edge.id === prefixedSelectedPathKey ? "#007bff" : "#b1b1b7" },
+      animated: edge.id === prefixedSelectedPathKey,
+    }));
+
+    setNodes(updatedNodes);
+    setEdges(updatedEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges, selectedNodeKey, selectedPathKey]);
+
+  const handleNodeClick: NodeMouseHandler = useCallback(
+    (_event, node) => {
+      onNodeSelect(node.id); // 親コンポーネントの状態を更新
+    },
+    [onNodeSelect]
+  );
+
+  const handleNodeDragStop: NodeDragHandler = useCallback(
+    (_event, node) => {
+      // ドラッグが終了したノード1件だけの新しい座標情報を作成
+      const newPosition = new Map<string, { x: number; y: number }>();
+      newPosition.set(node.id, node.position);
+
+      // ストアのアクションを呼び出して、座標を更新
+      updateAllNodePositions(newPosition);
+
+      // console.log("Node position updated automatically for:", node.id); // デバッグ用
+    },
+    [updateAllNodePositions]
+  );
 
   const handleEdgeClick: EdgeMouseHandler = useCallback(
     (_event, edge) => {
-      // 'e-' プレフィックスを削除して、ストアで管理しているペアキーを取得
-      const pairKey = edge.id.replace("e-", "");
-      // ストアのアクションを呼び出して、選択されたエッジのキーをセット
-      setSelectedEdgePairKey(pairKey);
-      console.log("Selected Edge PairKey:", pairKey);
+      // ★ プレフィックス 'e-' と、内部で使われる可能性のあるノード順のキーを正規化する
+      const canonicalKey = createCanonicalPathKey(edge.source!, edge.target!);
+      onPathSelect(canonicalKey);
     },
-    [setSelectedEdgePairKey]
+    [onPathSelect]
   );
 
   const handleNodesDelete = useCallback(
@@ -179,18 +206,18 @@ export function GraphEditor() {
 
   return (
     <div>
-      <div style={{ padding: "10px 0" }}>
-        <button onClick={handleSaveLayout}>Save Layout</button>
-      </div>
       <div style={{ height: "70vh", border: "1px solid #ddd" }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeDragStop={handleNodeDragStop}
           onEdgeClick={handleEdgeClick} // ★ 変更点3: クリックハンドラを渡す
           onNodesDelete={handleNodesDelete}
           onEdgesDelete={handleEdgesDelete}
+          onNodeClick={handleNodeClick}
+          deleteKeyCode={"Delete"}
           nodeTypes={nodeTypes}
           snapToGrid={true}
           snapGrid={[15, 15]}

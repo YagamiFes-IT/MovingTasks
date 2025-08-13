@@ -125,3 +125,8 @@
   gap: 10px;
   justify-content: flex-end;
 }
+
+.selected-row {
+  background-color: #e6f7ff; /* ハイライト用の背景色 */
+  font-weight: bold;
+}

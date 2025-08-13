@@ -1,4 +1,5 @@
 // src/components/TransportationSolver.tsx
+
 import React, { useState } from "react";
 import { useAppStore } from "../../store/dataStore"; // ストアのパスは適宜修正してください
 
