@@ -14,6 +14,7 @@ origins = [
     "http://localhost:3000", # React開発サーバーのURL
     "http://localhost:5173",
     "https://yagamifes-it.github.io/MovingTasks",
+    "https://yagamifes-it.github.io",
 ]
 
 app.add_middleware(
