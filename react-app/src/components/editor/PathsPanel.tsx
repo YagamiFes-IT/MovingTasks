@@ -20,16 +20,42 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
   const [pathNode2, setPathNode2] = useState("");
   const [newPathCost, setNewPathCost] = useState("");
   const [newPathOppositeCost, setNewPathOppositeCost] = useState("");
+  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
 
   const sortedPaths = useMemo(() => {
     if (!data) return [];
     return Array.from(data.paths.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [data]);
 
-  const allNodes = useMemo(() => {
+  const allGroups = useMemo(() => {
     if (!data) return [];
-    return [...data.points.values(), ...data.waypoints.values()].sort((a, b) => a.key.localeCompare(b.key));
+    return Array.from(data.groups.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [data]);
+
+  const filteredNodes = useMemo(() => {
+    if (!data) return [];
+    const all = [...data.points.values(), ...data.waypoints.values()];
+
+    // どのグループも選択されていない場合は、すべてのノードを表示
+    if (selectedGroups.size === 0) {
+      return all.sort((a, b) => a.key.localeCompare(b.key));
+    }
+
+    // 選択されたグループに属するノードのみをフィルタリング
+    return all.filter((node) => selectedGroups.has(node.groupKey)).sort((a, b) => a.key.localeCompare(b.key));
+  }, [data, selectedGroups]);
+
+  const handleGroupToggle = (groupKey: string) => {
+    setSelectedGroups((prevSelected) => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(groupKey)) {
+        newSelected.delete(groupKey);
+      } else {
+        newSelected.add(groupKey);
+      }
+      return newSelected;
+    });
+  };
 
   const handleAddPath = () => {
     if (!pathNode1 || !pathNode2) {
@@ -55,21 +81,36 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
 
   return (
     <div>
-      {/* --- パス追加フォーム --- */}
       <div className="collapsible-section">
         <h3 onClick={() => setIsAddPathOpen(!isAddPathOpen)}>
           <span className="triangle">{isAddPathOpen ? "▼" : "▶"}</span> Add New Path
         </h3>
         {isAddPathOpen && (
           <div className="add-node-form">
+            {/* ★ 5. グループフィルタ用のチェックボックスUIを追加 */}
+            <div className="group-filter" style={{ marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px solid #eee" }}>
+              <label>Filter nodes by group:</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "5px" }}>
+                {allGroups.map((group) => (
+                  <div key={group.key}>
+                    <input type="checkbox" id={`group-filter-${group.key}`} checked={selectedGroups.has(group.key)} onChange={() => handleGroupToggle(group.key)} />
+                    <label htmlFor={`group-filter-${group.key}`} style={{ marginLeft: "4px" }}>
+                      {group.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ★ 6. プルダウンの選択肢を`filteredNodes`に変更 */}
             <select value={pathNode1} onChange={(e) => setPathNode1(e.target.value)}>
               <option value="" disabled>
                 {" "}
                 -- Select Node 1 --{" "}
               </option>
-              {allNodes.map((node) => (
+              {filteredNodes.map((node) => (
                 <option key={node.key} value={node.key}>
-                  {node.key}
+                  {node.key} ({node.groupKey})
                 </option>
               ))}
             </select>
@@ -78,9 +119,9 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
                 {" "}
                 -- Select Node 2 --{" "}
               </option>
-              {allNodes.map((node) => (
+              {filteredNodes.map((node) => (
                 <option key={node.key} value={node.key}>
-                  {node.key}
+                  {node.key} ({node.groupKey})
                 </option>
               ))}
             </select>
