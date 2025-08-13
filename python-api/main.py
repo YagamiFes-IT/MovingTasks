@@ -90,10 +90,10 @@ def solve_dynamic_problem(data: ProblemDataModel): # 引数でデータを受け
         for point_key, point in data.points.items():
             if category_key in point.objects:
                 change = point.objects[category_key].toAmount - point.objects[category_key].fromAmount
-                if change > 0: # 供給地 (在庫が増える)
-                    supply_nodes[point_key] = change
-                elif change < 0: # 需要地 (在庫が減る)
-                    demand_nodes[point_key] = -change # 需要量は正の値にする
+                if change < 0: # 供給地 (在庫が増える)
+                    supply_nodes[point_key] = -change
+                elif change > 0: # 需要地 (在庫が減る)
+                    demand_nodes[point_key] = +change # 需要量は正の値にする
         
         print(f"Extracted Supply Nodes: {supply_nodes}")
         print(f"Extracted Demand Nodes: {demand_nodes}")

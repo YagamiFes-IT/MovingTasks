@@ -455,8 +455,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           const quantityChange = point.objects.get(category);
           if (quantityChange) {
             const diff = quantityChange.toAmount - quantityChange.fromAmount;
-            if (diff > 0) totalSupply += diff;
-            else if (diff < 0) totalDemand += -diff;
+            if (diff > 0) totalDemand += diff;
+            else if (diff < 0) totalSupply += -diff;
           }
         }
         if (totalSupply > 0 && totalSupply === totalDemand) {
