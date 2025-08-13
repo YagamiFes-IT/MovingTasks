@@ -1,6 +1,6 @@
 // src/components/TransportationSolver.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppStore } from "../../store/dataStore"; // ストアのパスは適宜修正してください
 
 const TransportationSolver: React.FC = () => {
@@ -12,6 +12,23 @@ const TransportationSolver: React.FC = () => {
   const [penalty, setPenalty] = useState<number>(0);
   // 表示をフィルタリングするための備品カテゴリキー（"all"は全件表示）
   const [displayCategory, setDisplayCategory] = useState<string>("all");
+
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+  };
+
+  useEffect(() => {
+    if (data && data.objectCategories.size > 0) {
+      const currentCategoryExists = data.objectCategories.has(displayCategory);
+      if (!currentCategoryExists || displayCategory === "all") {
+        const firstCategoryKey = data.objectCategories.keys().next().value;
+        if (firstCategoryKey) {
+          // デフォルトを「すべて表示」のままにするか、最初のカテゴリを選択させるかはお好みで
+          // setDisplayCategory(firstCategoryKey);
+        }
+      }
+    }
+  }, [data, displayCategory]);
 
   // 3. 計算実行ボタンが押されたときの処理
   const handleSolve = () => {
@@ -35,7 +52,7 @@ const TransportationSolver: React.FC = () => {
       {/* --- 機能1: タスクペナルティの入力と最適化の実行 --- */}
       <div style={{ marginBottom: "15px" }}>
         <label>タスクペナルティ: </label>
-        <input type="number" value={penalty} onChange={(e) => setPenalty(Number(e.target.value))} style={{ marginLeft: "10px" }} />
+        <input type="number" value={penalty} onChange={(e) => setPenalty(Number(e.target.value))} onFocus={handleFocus} style={{ marginLeft: "10px" }} />
       </div>
       <button onClick={handleSolve} disabled={isSolving}>
         {isSolving ? "計算中..." : "全備品の最適化計算を実行"}
