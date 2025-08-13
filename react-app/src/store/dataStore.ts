@@ -493,9 +493,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         taskPenalty: taskPenalty, // ★ UIから渡された値を使用
         targetObjectCategoryKeys: solvableCategoryKeys, // ★ 計算対象のキーリスト
       };
+      const PRODUCTION_API_URL = "https://movingtasks-pythonapi.onrender.com";
+      const DEVELOPMENT_API_URL = "http://localhost:8000";
 
-      // 4. APIを呼び出す
-      const apiUrl = import.meta.env.VITE_API_URL;
+      // 2. 現在のホスト名に応じてAPI URLを決定
+      //    window.location.hostnameで、現在ブラウザが表示しているサイトのドメイン名がわかる
+      const apiUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? DEVELOPMENT_API_URL : PRODUCTION_API_URL;
+
+      console.log("Connecting to API at:", apiUrl); // デバッグ用に、どちらのURLを使っているか表示
+
       const response = await fetch(`${apiUrl}/solve-dynamic-problem`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
