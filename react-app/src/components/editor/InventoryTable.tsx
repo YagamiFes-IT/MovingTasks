@@ -48,6 +48,10 @@ export function InventoryTable({ data, selectedCategoryKey, focusedNodeKey, onRo
     return { from: totalFrom, to: totalTo };
   }, [data, selectedCategoryKey, allPoints]);
 
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+  };
+
   const selectedCategory = data.objectCategories.get(selectedCategoryKey || "");
   if (!selectedCategory) return <div className="placeholder">カテゴリを選択してください。</div>;
 
@@ -82,10 +86,10 @@ export function InventoryTable({ data, selectedCategoryKey, focusedNodeKey, onRo
                 {point.name} (<code>{point.key}</code>)
               </td>
               <td>
-                <input type="number" className="cost-input" value={fromAmount} onChange={(e) => updatePointObjectQuantity(point.key, selectedCategory.key, Number(e.target.value), toAmount)} />
+                <input type="number" className="cost-input" value={fromAmount} onChange={(e) => updatePointObjectQuantity(point.key, selectedCategory.key, Number(e.target.value), toAmount)} onFocus={handleFocus} />
               </td>
               <td>
-                <input type="number" className="cost-input" value={toAmount} onChange={(e) => updatePointObjectQuantity(point.key, selectedCategory.key, fromAmount, Number(e.target.value))} />
+                <input type="number" className="cost-input" value={toAmount} onChange={(e) => updatePointObjectQuantity(point.key, selectedCategory.key, fromAmount, Number(e.target.value))} onFocus={handleFocus} />
               </td>
             </tr>
           );
