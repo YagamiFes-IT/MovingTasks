@@ -10,13 +10,12 @@
     "preview": "vite preview",
     "postinstall": "cp -r node_modules/pyodide/ public/pyodide/",
     "predeploy": "npm run build",
-    "deploy": "npm run build && node scripts/copy404.js && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist"
   },
   "dependencies": {
     "dagre": "^0.8.5",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
-    "pyodide": "^0.28.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.5.2",
