@@ -1,54 +1,62 @@
 // src/components/pathfinding/RouteViewer.tsx
 
 import { useState, useMemo } from "react";
-import type { Data } from "../../services/dataLoader";
-import { RouteResultTable } from "./RouteResultTable";
-import type { Point, Waypoint } from "../../types/entities";
+import { useAppStore } from "../../store/dataStore";
+import type { Route } from "../../types/entities";
+import { RouteTablePanel } from "./RouteTablePanel";
+import { RouteMiniMap } from "./RouteMiniMap";
 
-interface RouteViewerProps {
-  data: Data;
-}
+export const RouteViewer = () => {
+  const data = useAppStore((state) => state.data);
 
-export const RouteViewer = ({ data }: RouteViewerProps) => {
+  // --- 親で管理する状態 ---
+  // 1. 左パネルで選択された「始点ノード」のキー
   const [selectedStartNode, setSelectedStartNode] = useState<string>("");
+  // 2. 左パネルのテーブルで選択された単一の「経路オブジェクト」
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
 
-  const nodeNameMap = useMemo(() => {
-    return new Map(
-      // ★★★ ここを修正 ★★★
-      // nodeの型を、より具体的な `Point | Waypoint` と指定する
-      [...data.points.entries(), ...data.waypoints.entries()].map(([key, node]: [string, Point | Waypoint]): [string, string] => {
-        // "name" in node のチェックにより、TypeScriptがnodeの型を正しく推論してくれる
-        // これにより `(node as any)` が不要になる
-        return [key, "name" in node ? node.name : node.key];
-      })
-    );
-  }, [data]);
-
-  const filteredRoutes = useMemo(() => {
-    if (!selectedStartNode) return [];
+  // --- 子に渡すためのデータを準備 ---
+  // 選択された始点ノードから出発する全経路のリスト
+  const routesFromStart = useMemo(() => {
+    if (!data || !selectedStartNode) return [];
     return Array.from(data.routes.values())
       .filter((route) => route.from === selectedStartNode)
       .sort((a, b) => a.distance - b.distance);
-  }, [data.routes, selectedStartNode]);
+  }, [data, selectedStartNode]);
 
-  if (data.routes.size === 0) {
-    return null; // ルートがなければ何も表示しない
+  // ノードのキーと名前の対応表
+  const nodeNameMap = useMemo(() => {
+    if (!data) return new Map();
+    return new Map([...data.points.entries(), ...data.waypoints.entries()].map(([key, node]) => [key, "name" in node ? node.name : key]));
+  }, [data]);
+
+  // データがなければ何も表示しない
+  if (!data || data.routes.size === 0) {
+    return <p>計算済みの経路がありません。</p>;
   }
 
   return (
-    <div>
-      <h3>計算結果の確認</h3>
-      <p>結果を表示したい始点ノードを選択してください。</p>
-      <select value={selectedStartNode} onChange={(e) => setSelectedStartNode(e.target.value)} style={{ marginBottom: "20px" }}>
-        <option value="">始点ノードを選択...</option>
-        {Array.from(data.points.values()).map((point) => (
-          <option key={point.key} value={point.key}>
-            {point.name}
-          </option>
-        ))}
-      </select>
+    <div style={{ display: "flex", gap: "20px", height: "100%" }}>
+      {/* --- 左パネル --- */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <RouteTablePanel
+          points={Array.from(data.points.values())}
+          routes={routesFromStart}
+          nodeNameMap={nodeNameMap}
+          selectedStartNode={selectedStartNode}
+          onStartNodeChange={(nodeKey) => {
+            setSelectedStartNode(nodeKey);
+            setSelectedRoute(null); // 始点を変えたら経路の選択はリセット
+          }}
+          selectedRoute={selectedRoute}
+          onRouteSelect={setSelectedRoute}
+        />
+      </div>
 
-      {selectedStartNode && <RouteResultTable routes={filteredRoutes} nodeNameMap={nodeNameMap} />}
+      {/* --- 右パネル --- */}
+      <div style={{ flex: 2.3, minWidth: 0, border: "1px solid #ccc", borderRadius: "8px" }}>
+        <RouteMiniMap data={data} highlightedRoute={selectedRoute} />
+      </div>
     </div>
   );
 };

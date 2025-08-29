@@ -16,7 +16,7 @@ export const AppHeader = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setLoading();
+    setLoading(true);
     try {
       const loadedData = await loadDataFromZip(file);
       setData(loadedData);

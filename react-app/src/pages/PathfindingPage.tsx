@@ -26,14 +26,16 @@ export const PathfindingPage = () => {
   }
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div style={{ padding: "20px", height: "calc(100vh - 120px)" }}>
       <h2>全地点間の最短経路計算</h2>
 
       <PathfindingControls onCalculate={handleCalculateAll} />
 
       <CalculationStatus routeCount={data.routes.size} isStale={isRouteStale} />
 
-      <RouteViewer data={data} />
+      <div style={{ height: "100%" }}>
+        <RouteViewer />
+      </div>
     </div>
   );
 };

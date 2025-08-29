@@ -1,7 +1,7 @@
 // src/pages/SolverPage.tsx
 
 import TransportationSolver from "../components/solver/TransportationSolver.tsx";
-import { useAppStore } from "../store/dataStore.ts"; // ★ ストアをインポート
+import { useAppStore } from "../store/dataStore"; // ★ ストアをインポート
 import { NoData } from "../components/layout/NoData.tsx";
 export function SolverPage() {
   // ★ ストアからdataを取得

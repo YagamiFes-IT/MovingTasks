@@ -6,7 +6,7 @@ import ReactFlow, { Background, Handle, Position, Controls, useReactFlow, ReactF
 import type { Node, Edge, NodeProps, NodeMouseHandler } from "reactflow";
 import "reactflow/dist/style.css";
 import { Data } from "../../services/dataLoader";
-import "../../pages/ServicePage.css";
+
 // --- Propsの型定義 ---
 interface ServiceMapProps {
   data: Data;

@@ -5,13 +5,14 @@ import { useAppStore } from "../../store/dataStore"; // ストアのパスは適
 
 const TransportationSolver: React.FC = () => {
   // 1. ストアから必要な状態とアクションを取得
-  const { data, isSolving, solverResult, error, solveTransportationProblem } = useAppStore();
+  const { data, isSolving, solverResult, error, solveTransportationProblem, solveTransportationProblemFast } = useAppStore();
 
   // 2. このコンポーネント内で管理する状態
   // ユーザーが入力するタスクペナルティ
   const [penalty, setPenalty] = useState<number>(0);
   // 表示をフィルタリングするための備品カテゴリキー（"all"は全件表示）
   const [displayCategory, setDisplayCategory] = useState<string>("all");
+  const [timeLimit, setTimeLimit] = useState<number>(60);
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.target.select();
@@ -31,11 +32,13 @@ const TransportationSolver: React.FC = () => {
   }, [data, displayCategory]);
 
   // 3. 計算実行ボタンが押されたときの処理
-  const handleSolve = () => {
-    // ストアのアクションに、UIから入力されたペナルティ値を渡して実行
+  const handleSolveFull = () => {
     solveTransportationProblem(penalty);
   };
 
+  const handleSolveFast = () => {
+    solveTransportationProblemFast(penalty, timeLimit);
+  };
   // 4. 表示用のデータを準備
   // 全てのタスクのリスト
   const allTasks = data?.tasks ? Array.from(data.tasks.values()) : [];
@@ -54,29 +57,52 @@ const TransportationSolver: React.FC = () => {
         <label>タスクペナルティ: </label>
         <input type="number" value={penalty} onChange={(e) => setPenalty(Number(e.target.value))} onFocus={handleFocus} style={{ marginLeft: "10px" }} />
       </div>
-      <button onClick={handleSolve} disabled={isSolving}>
-        {isSolving ? "計算中..." : "全備品の最適化計算を実行"}
-      </button>
+
+      <div style={{ marginBottom: "15px" }}>
+        <label>計算時間の上限 (秒): </label>
+        <input type="number" value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))} onFocus={handleFocus} style={{ marginLeft: "10px" }} min="1" />
+      </div>
+
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button onClick={handleSolveFast} disabled={isSolving}>
+          {isSolving ? "計算中..." : "高速計算 (1分以内)"}
+        </button>
+        <button onClick={handleSolveFull} disabled={isSolving}>
+          {isSolving ? "計算中..." : "完全解を計算"}
+        </button>
+      </div>
 
       {error && <p style={{ color: "red", marginTop: "15px" }}>エラー: {error}</p>}
 
-      {/* --- 機能2: 結果のサマリーとフィルタ表示 --- */}
+      {/* --- 結果表示部分（ステータスの表示を少しリッチにする） --- */}
       {solverResult && (
         <div style={{ marginTop: "20px" }}>
           <h3>計算結果サマリー</h3>
-          {/* オブジェクトごとの成否を表示 */}
           <ul style={{ listStyle: "none", paddingLeft: 0, marginBottom: "20px" }}>
-            {solverResult.map((result) => (
-              <li key={result.objectKey} style={{ borderBottom: "1px solid #444", padding: "10px 0" }}>
-                <strong>{data?.objectCategories.get(result.objectKey)?.name || result.objectKey}:</strong>
-                <span style={{ color: result.status === "Optimal" ? "lightgreen" : "orange", marginLeft: "10px" }}>{result.status}</span>
-                {result.status === "Optimal" && (
-                  <span style={{ fontSize: "0.9em", marginLeft: "15px" }}>
-                    (コスト: {result.totalCost?.toFixed(2)}, タスク数: {result.taskCount})
-                  </span>
-                )}
-              </li>
-            ))}
+            {solverResult.map((result) => {
+              // ★ 4. ステータスに応じて色とテキストを動的に変更
+              let statusColor = "orange";
+              let statusText = result.status;
+              if (result.status === "Optimal") {
+                statusColor = "lightgreen";
+                statusText = "最適解";
+              } else if (result.status === "Feasible") {
+                statusColor = "lightblue";
+                statusText = "暫定解 (時間内)";
+              }
+
+              return (
+                <li key={result.objectKey} style={{ borderBottom: "1px solid #444", padding: "10px 0" }}>
+                  <strong>{data?.objectCategories.get(result.objectKey)?.name || result.objectKey}:</strong>
+                  <span style={{ color: statusColor, marginLeft: "10px", fontWeight: "bold" }}>{statusText}</span>
+                  {["Optimal", "Feasible"].includes(result.status) && (
+                    <span style={{ fontSize: "0.9em", marginLeft: "15px" }}>
+                      (コスト: {result.totalCost?.toFixed(2)}, タスク数: {result.taskCount})
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
 
           {/* プルダウン形式で表示するタスクを選択 */}
