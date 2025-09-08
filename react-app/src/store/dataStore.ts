@@ -3,34 +3,8 @@ import { create } from "zustand";
 import { Data } from "../services/dataLoader";
 import { ObjectCategory, Path, Group, Point, Waypoint, QuantityChange, Route, Task } from "../types/entities";
 import { createCanonicalPathKey } from "../utils/pathUtils";
-
-// APIレスポンスの型定義
-interface RouteResult {
-  supplyNode: string;
-  demandNode: string;
-  amount: number;
-  cost?: number;
-  objectKey: string;
-}
-
-interface SolverResultByCategory {
-  objectKey: string;
-  status: string;
-  totalCost: number | null;
-  taskCount: number;
-  routes: RouteResult[];
-}
-
-interface ProblemDataForApi {
-  objectCategories: { [key: string]: ObjectCategory }; // 必要であればanyをより具体的な型に
-  points: { [key: string]: object };
-  routes: { [key: string]: Route };
-  taskPenalty: number;
-  targetObjectCategoryKeys: string[];
-  timeLimitSeconds?: number; // オプショナルなプロパティとして定義
-}
-
-type SolverResponse = SolverResultByCategory[];
+import type { SolverResponse } from "../types/apiTypes";
+import { solveProblemApi } from "../services/api";
 
 // ストア全体の型定義
 interface AppState {
@@ -62,78 +36,21 @@ interface AppState {
   updatePointObjectQuantity: (pointKey: string, categoryKey: string, from: number, to: number) => void;
   isSolving: boolean;
   solverResult: SolverResponse | null;
-  solveTransportationProblem: (taskPenalty: number) => Promise<void>;
-  solveTransportationProblemFast: (taskPenalty: number, timeLimit: number) => Promise<void>;
+  solveTransportationProblem: (taskPenalty: number, selectedCategoryKeys: string[]) => Promise<void>;
+  solveTransportationProblemFast: (taskPenalty: number, timeLimit: number, selectedCategoryKeys: string[]) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => {
   // --- API呼び出しの共通ロジック ---
-  const _solveProblem = async (taskPenalty: number, endpoint: string, timeLimit?: number) => {
+  const _solveProblem = async (taskPenalty: number, endpoint: string, timeLimit?: number, selectedCategoryKeys?: string[]) => {
     set({ isSolving: true, error: null, solverResult: null });
 
     try {
       const currentData = get().data;
       if (!currentData) throw new Error("データがロードされていません。");
 
-      const solvableCategoryKeys: string[] = [];
-      for (const category of currentData.objectCategories.values()) {
-        let totalSupply = 0;
-        let totalDemand = 0;
-        for (const point of currentData.points.values()) {
-          const quantityChange = point.objects.get(category);
-          if (quantityChange) {
-            const diff = quantityChange.toAmount - quantityChange.fromAmount;
-            if (diff > 0) totalDemand += diff;
-            else if (diff < 0) totalSupply += -diff;
-          }
-        }
-        if (totalSupply > 0 && totalSupply === totalDemand) {
-          solvableCategoryKeys.push(category.key);
-        }
-      }
+      const results = await solveProblemApi(currentData, taskPenalty, endpoint, timeLimit, selectedCategoryKeys);
 
-      if (solvableCategoryKeys.length === 0) {
-        toast("計算可能な（需要と供給が一致する）備品がありません。");
-        set({ isSolving: false });
-        return;
-      }
-
-      const pointsForApi = Array.from(currentData.points.values()).reduce((acc, point) => {
-        const newObjects = Array.from(point.objects.entries()).reduce((objAcc, [category, quantityChange]) => {
-          objAcc[category.key] = quantityChange;
-          return objAcc;
-        }, {} as { [key: string]: QuantityChange });
-        acc[point.key] = { ...point, objects: newObjects };
-        return acc;
-      }, {} as { [key: string]: object });
-
-      const problemData: ProblemDataForApi = {
-        objectCategories: Object.fromEntries(currentData.objectCategories.entries()),
-        points: pointsForApi,
-        routes: Object.fromEntries(currentData.routes.entries()),
-        taskPenalty: taskPenalty,
-        targetObjectCategoryKeys: solvableCategoryKeys,
-      };
-      if (timeLimit !== undefined) {
-        problemData.timeLimitSeconds = timeLimit;
-      }
-
-      const PRODUCTION_API_URL = "https://movingtasks-pythonapi.onrender.com";
-      const DEVELOPMENT_API_URL = "http://localhost:8000";
-      const apiUrl = window.location.hostname === "localhost" ? DEVELOPMENT_API_URL : PRODUCTION_API_URL;
-
-      const response = await fetch(`${apiUrl}/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(problemData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || "APIリクエストに失敗しました");
-      }
-
-      const results: SolverResponse = await response.json();
       const newTasks = new Map<string, Task>();
       let isAnyOptimal = false;
 
@@ -533,11 +450,11 @@ export const useAppStore = create<AppState>((set, get) => {
       }),
 
     // ソルバーアクション
-    solveTransportationProblem: async (taskPenalty: number) => {
-      await _solveProblem(taskPenalty, "solve-dynamic-problem");
+    solveTransportationProblem: async (taskPenalty: number, selectedCategoryKeys: string[]) => {
+      await _solveProblem(taskPenalty, "solve-dynamic-problem", undefined, selectedCategoryKeys);
     },
-    solveTransportationProblemFast: async (taskPenalty: number, timeLimit: number) => {
-      await _solveProblem(taskPenalty, "solve-dynamic-problem-fast", timeLimit);
+    solveTransportationProblemFast: async (taskPenalty: number, timeLimit: number, selectedCategoryKeys: string[]) => {
+      await _solveProblem(taskPenalty, "solve-dynamic-problem-fast", timeLimit, selectedCategoryKeys);
     },
   };
 });

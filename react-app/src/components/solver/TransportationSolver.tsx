@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAppStore } from "../../store/dataStore"; // ストアのパスは適宜修正してください
+import { useExportTasksToExcel } from "../../hooks/useExportTasksToExcel"; // 追加
 
 const TransportationSolver: React.FC = () => {
   // 1. ストアから必要な状態とアクションを取得
@@ -13,6 +14,13 @@ const TransportationSolver: React.FC = () => {
   // 表示をフィルタリングするための備品カテゴリキー（"all"は全件表示）
   const [displayCategory, setDisplayCategory] = useState<string>("all");
   const [timeLimit, setTimeLimit] = useState<number>(60);
+
+  const [selectedCategoryKeys, setSelectedCategoryKeys] = useState<string[]>([]);
+
+  const { exportToExcel } = useExportTasksToExcel(); // 追加
+
+  // zipファイル名はアップロード時にstate等で保持して渡してください（ここでは空文字で仮置き）
+  const zipFileName = "";
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.target.select();
@@ -33,11 +41,11 @@ const TransportationSolver: React.FC = () => {
 
   // 3. 計算実行ボタンが押されたときの処理
   const handleSolveFull = () => {
-    solveTransportationProblem(penalty);
+    solveTransportationProblem(penalty, selectedCategoryKeys);
   };
 
   const handleSolveFast = () => {
-    solveTransportationProblemFast(penalty, timeLimit);
+    solveTransportationProblemFast(penalty, timeLimit, selectedCategoryKeys);
   };
   // 4. 表示用のデータを準備
   // 全てのタスクのリスト
@@ -51,7 +59,23 @@ const TransportationSolver: React.FC = () => {
   return (
     <div style={{ marginTop: "30px", padding: "20px", border: "1px solid #555", borderRadius: "8px", width: "100%", maxWidth: "600px" }}>
       <h2>輸送問題ソルバー</h2>
-
+      <div style={{ marginBottom: "15px" }}>
+        <label>計算対象カテゴリ:</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "5px" }}>
+          {categoryOptions.map((category) => (
+            <label key={category.key}>
+              <input
+                type="checkbox"
+                checked={selectedCategoryKeys.includes(category.key)}
+                onChange={(e) => {
+                  setSelectedCategoryKeys((prev) => (e.target.checked ? [...prev, category.key] : prev.filter((k) => k !== category.key)));
+                }}
+              />
+              {category.name}
+            </label>
+          ))}
+        </div>
+      </div>
       {/* --- 機能1: タスクペナルティの入力と最適化の実行 --- */}
       <div style={{ marginBottom: "15px" }}>
         <label>タスクペナルティ: </label>
@@ -78,6 +102,9 @@ const TransportationSolver: React.FC = () => {
       {solverResult && (
         <div style={{ marginTop: "20px" }}>
           <h3>計算結果サマリー</h3>
+          <button style={{ marginTop: "15px" }} onClick={() => exportToExcel(solverResult, data ? new Map(data.objectCategories) : new Map(), penalty, timeLimit, selectedCategoryKeys, zipFileName)}>
+            エクセルにエクスポート
+          </button>
           <ul style={{ listStyle: "none", paddingLeft: 0, marginBottom: "20px" }}>
             {solverResult.map((result) => {
               // ★ 4. ステータスに応じて色とテキストを動的に変更
