@@ -20,16 +20,16 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
   const [pathNode2, setPathNode2] = useState("");
   const [newPathCost, setNewPathCost] = useState("");
   const [newPathOppositeCost, setNewPathOppositeCost] = useState("");
-  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+  const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set());
 
   const sortedPaths = useMemo(() => {
     if (!data) return [];
     return Array.from(data.paths.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [data]);
 
-  const allGroups = useMemo(() => {
+  const allAreas = useMemo(() => {
     if (!data) return [];
-    return Array.from(data.groups.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(data.areas.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [data]);
 
   const filteredNodes = useMemo(() => {
@@ -37,21 +37,21 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
     const all = [...data.points.values(), ...data.waypoints.values()];
 
     // どのグループも選択されていない場合は、すべてのノードを表示
-    if (selectedGroups.size === 0) {
+    if (selectedAreas.size === 0) {
       return all.sort((a, b) => a.key.localeCompare(b.key));
     }
 
     // 選択されたグループに属するノードのみをフィルタリング
-    return all.filter((node) => selectedGroups.has(node.groupKey)).sort((a, b) => a.key.localeCompare(b.key));
-  }, [data, selectedGroups]);
+    return all.filter((node) => selectedAreas.has(node.areaKey)).sort((a, b) => a.key.localeCompare(b.key));
+  }, [data, selectedAreas]);
 
-  const handleGroupToggle = (groupKey: string) => {
-    setSelectedGroups((prevSelected) => {
+  const handleAreaToggle = (areaKey: string) => {
+    setSelectedAreas((prevSelected) => {
       const newSelected = new Set(prevSelected);
-      if (newSelected.has(groupKey)) {
-        newSelected.delete(groupKey);
+      if (newSelected.has(areaKey)) {
+        newSelected.delete(areaKey);
       } else {
-        newSelected.add(groupKey);
+        newSelected.add(areaKey);
       }
       return newSelected;
     });
@@ -88,14 +88,14 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
         {isAddPathOpen && (
           <div className="add-node-form">
             {/* ★ 5. グループフィルタ用のチェックボックスUIを追加 */}
-            <div className="group-filter" style={{ marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px solid #eee" }}>
-              <label>Filter nodes by group:</label>
+            <div className="area-filter" style={{ marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px solid #eee" }}>
+              <label>Filter nodes by area:</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "5px" }}>
-                {allGroups.map((group) => (
-                  <div key={group.key}>
-                    <input type="checkbox" id={`group-filter-${group.key}`} checked={selectedGroups.has(group.key)} onChange={() => handleGroupToggle(group.key)} />
-                    <label htmlFor={`group-filter-${group.key}`} style={{ marginLeft: "4px" }}>
-                      {group.name}
+                {allAreas.map((area) => (
+                  <div key={area.key}>
+                    <input type="checkbox" id={`area-filter-${area.key}`} checked={selectedAreas.has(area.key)} onChange={() => handleAreaToggle(area.key)} />
+                    <label htmlFor={`area-filter-${area.key}`} style={{ marginLeft: "4px" }}>
+                      {area.name}
                     </label>
                   </div>
                 ))}
@@ -110,7 +110,7 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
               </option>
               {filteredNodes.map((node) => (
                 <option key={node.key} value={node.key}>
-                  {node.key} ({node.groupKey})
+                  {node.key} ({node.areaKey})
                 </option>
               ))}
             </select>
@@ -121,7 +121,7 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
               </option>
               {filteredNodes.map((node) => (
                 <option key={node.key} value={node.key}>
-                  {node.key} ({node.groupKey})
+                  {node.key} ({node.areaKey})
                 </option>
               ))}
             </select>
@@ -152,11 +152,11 @@ export function PathsPanel({ selectedPathKey, onPathSelect }: PathsPanelProps) {
                   {" "}
                   <td>
                     {data.waypoints.has(path.from.key) ? `(W) ${path.from.key}` : path.from.key}
-                    <span className="group-name">({path.from.groupKey})</span>
+                    <span className="area-name">({path.from.areaKey})</span>
                   </td>
                   <td>
                     {data.waypoints.has(path.to.key) ? `(W) ${path.to.key}` : path.to.key}
-                    <span className="group-name">({path.to.groupKey})</span>
+                    <span className="area-name">({path.to.areaKey})</span>
                   </td>
                   <td>
                     <input type="number" value={path.cost} onChange={(e) => updatePathCost(pathKey, "forward", Number(e.target.value))} className="cost-input" />

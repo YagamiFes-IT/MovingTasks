@@ -30,7 +30,7 @@ export function DataInspector({ selectedNodeKey, onNodeSelect, selectedPathKey, 
           Paths
         </button>
         <button onClick={() => setActiveTab("nodes")} className={activeTab === "nodes" ? "active" : ""}>
-          Nodes & Groups
+          Nodes & Areas
         </button>
       </div>
 

@@ -89,7 +89,7 @@ const TransportationSolver: React.FC = () => {
 
       <div style={{ display: "flex", gap: "10px" }}>
         <button onClick={handleSolveFast} disabled={isSolving}>
-          {isSolving ? "計算中..." : "高速計算 (1分以内)"}
+          {isSolving ? "計算中..." : "指定時間内で計算"}
         </button>
         <button onClick={handleSolveFull} disabled={isSolving}>
           {isSolving ? "計算中..." : "完全解を計算"}

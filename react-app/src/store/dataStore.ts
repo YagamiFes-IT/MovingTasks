@@ -1,7 +1,7 @@
 import { toast } from "react-hot-toast";
 import { create } from "zustand";
 import { Data } from "../services/dataLoader";
-import { ObjectCategory, Path, Group, Point, Waypoint, QuantityChange, Route, Task } from "../types/entities";
+import { ObjectCategory, Path, Area, Point, Waypoint, QuantityChange, Route, Task } from "../types/entities";
 import { createCanonicalPathKey } from "../utils/pathUtils";
 import type { SolverResponse } from "../types/apiTypes";
 import { solveProblemApi } from "../services/api";
@@ -26,12 +26,12 @@ interface AppState {
   updatePathCost: (pathKey: string, direction: "forward" | "backward", newCost: number) => void;
   addPath: (nodeKey1: string, nodeKey2: string, cost1to2?: number, cost2to1?: number) => void;
   deletePaths: (pathKeysToDelete: string[]) => void;
-  addNode: (type: "point" | "waypoint", key: string, groupKey: string, name?: string) => void;
-  updateNode: (key: string, newGroupKey: string, newName?: string) => void;
+  addNode: (type: "point" | "waypoint", key: string, areaKey: string, name?: string) => void;
+  updateNode: (key: string, newAreaKey: string, newName?: string) => void;
   deleteNodes: (nodeKeysToDelete: string[]) => void;
-  addGroup: (key: string, name: string, description: string) => void;
-  updateGroup: (key: string, newName: string, newDescription: string) => void;
-  deleteGroup: (groupKey: string) => void;
+  addArea: (key: string, name: string, description: string) => void;
+  updateArea: (key: string, newName: string, newDescription: string) => void;
+  deleteArea: (areaKey: string) => void;
   createNewProject: () => void;
   updatePointObjectQuantity: (pointKey: string, categoryKey: string, from: number, to: number) => void;
   isSolving: boolean;
@@ -101,7 +101,7 @@ export const useAppStore = create<AppState>((set, get) => {
       // コンストラクタでReadonlyMapに変換するのは安全な方法。
       // routesは初期状態では空なので、空のMapを渡す。
       set({
-        data: new Data(new Map(newData.objectCategories), new Map(newData.groups), new Map(newData.points), new Map(newData.waypoints), new Map(newData.paths), newData.routes ? new Map(newData.routes) : new Map(), newData.tasks ? new Map(newData.tasks) : new Map()),
+        data: new Data(new Map(newData.objectCategories), new Map(newData.areas), new Map(newData.points), new Map(newData.waypoints), new Map(newData.paths), newData.routes ? new Map(newData.routes) : new Map(), newData.tasks ? new Map(newData.tasks) : new Map()),
         isLoading: false,
         error: null,
       });
@@ -183,7 +183,7 @@ export const useAppStore = create<AppState>((set, get) => {
           const newPointObjects = new Map(point.objects);
           newPointObjects.delete(categoryToDelete);
 
-          const updatedPoint = new Point(point.key, point.name, point.groupKey, point.x, point.y, newPointObjects);
+          const updatedPoint = new Point(point.key, point.name, point.areaKey, point.x, point.y, newPointObjects);
           newPoints.set(pointKey, updatedPoint);
         }
       }
@@ -207,40 +207,40 @@ export const useAppStore = create<AppState>((set, get) => {
       console.log("--- 7. toast.success() が呼び出されました ---");
     },
 
-    // --- Group（グループ）系アクション ---
+    // --- Area（グループ）系アクション ---
 
-    addGroup: (key, name, description) =>
+    addArea: (key, name, description) =>
       set((state) => {
-        if (!state.data || state.data.groups.has(key)) {
-          if (state.data?.groups.has(key)) alert(`エラー: グループキー "${key}" は既に使用されています。`);
+        if (!state.data || state.data.areas.has(key)) {
+          if (state.data?.areas.has(key)) alert(`エラー: グループキー "${key}" は既に使用されています。`);
           return {};
         }
-        const newGroups = new Map(state.data.groups);
-        newGroups.set(key, new Group(key, name, description));
-        return { data: state.data.withNewGroups(newGroups) };
+        const newAreas = new Map(state.data.areas);
+        newAreas.set(key, new Area(key, name, description));
+        return { data: state.data.withNewAreas(newAreas) };
       }),
 
-    updateGroup: (key, newName, newDescription) =>
+    updateArea: (key, newName, newDescription) =>
       set((state) => {
         if (!state.data) return {};
-        const newGroups = new Map(state.data.groups);
-        const group = newGroups.get(key);
-        if (group) {
+        const newAreas = new Map(state.data.areas);
+        const area = newAreas.get(key);
+        if (area) {
           // イミュータブルにするため新しいインスタンスで置き換え
-          newGroups.set(key, new Group(key, newName, newDescription));
+          newAreas.set(key, new Area(key, newName, newDescription));
         }
-        return { data: state.data.withNewGroups(newGroups) };
+        return { data: state.data.withNewAreas(newAreas) };
       }),
 
-    deleteGroup: (groupKey) =>
+    deleteArea: (areaKey) =>
       set((state) => {
         if (!state.data) return {};
 
-        const nodesInGroup = [...state.data.points.values(), ...state.data.waypoints.values()].filter((node) => node.groupKey === groupKey);
-        const nodesToDelete = nodesInGroup.map((node) => node.key);
+        const nodesInArea = [...state.data.points.values(), ...state.data.waypoints.values()].filter((node) => node.areaKey === areaKey);
+        const nodesToDelete = nodesInArea.map((node) => node.key);
 
-        const newGroups = new Map(state.data.groups);
-        newGroups.delete(groupKey);
+        const newAreas = new Map(state.data.areas);
+        newAreas.delete(areaKey);
 
         const newPoints = new Map(state.data.points);
         const newWaypoints = new Map(state.data.waypoints);
@@ -258,14 +258,14 @@ export const useAppStore = create<AppState>((set, get) => {
 
         // メソッドをチェーンして更新
         return {
-          data: state.data.withNewGroups(newGroups).withNewPoints(newPoints).withNewWaypoints(newWaypoints).withNewPaths(newPaths),
+          data: state.data.withNewAreas(newAreas).withNewPoints(newPoints).withNewWaypoints(newWaypoints).withNewPaths(newPaths),
           isRouteStale: true,
         };
       }),
 
     // --- Node（地点）系アクション ---
 
-    addNode: (type, key, groupKey, name) =>
+    addNode: (type, key, areaKey, name) =>
       set((state) => {
         if (!state.data || state.data.points.has(key) || state.data.waypoints.has(key)) {
           if (state.data) alert(`エラー: ノードキー "${key}" は既に使用されています。`);
@@ -274,16 +274,16 @@ export const useAppStore = create<AppState>((set, get) => {
 
         if (type === "point") {
           const newPoints = new Map(state.data.points);
-          newPoints.set(key, new Point(key, name || key, groupKey, 0, 0, new Map()));
+          newPoints.set(key, new Point(key, name || key, areaKey, 0, 0, new Map()));
           return { data: state.data.withNewPoints(newPoints), isRouteStale: true };
         } else {
           const newWaypoints = new Map(state.data.waypoints);
-          newWaypoints.set(key, new Waypoint(key, groupKey, 0, 0));
+          newWaypoints.set(key, new Waypoint(key, areaKey, 0, 0));
           return { data: state.data.withNewWaypoints(newWaypoints), isRouteStale: true };
         }
       }),
 
-    updateNode: (key, newGroupKey, newName) =>
+    updateNode: (key, newAreaKey, newName) =>
       set((state) => {
         if (!state.data) return {};
 
@@ -293,7 +293,7 @@ export const useAppStore = create<AppState>((set, get) => {
           const newPoint = new Point(
             key,
             newName ?? oldPoint.name,
-            newGroupKey,
+            newAreaKey,
             oldPoint.x,
             oldPoint.y,
             new Map(oldPoint.objects) // ReadonlyMapから新しいMapを生成
@@ -303,7 +303,7 @@ export const useAppStore = create<AppState>((set, get) => {
         } else if (state.data.waypoints.has(key)) {
           const newWaypoints = new Map(state.data.waypoints);
           const oldWaypoint = newWaypoints.get(key)!;
-          const newWaypoint = new Waypoint(key, newGroupKey, oldWaypoint.x, oldWaypoint.y);
+          const newWaypoint = new Waypoint(key, newAreaKey, oldWaypoint.x, oldWaypoint.y);
           newWaypoints.set(key, newWaypoint);
           return { data: state.data.withNewWaypoints(newWaypoints), isRouteStale: true };
         }
@@ -349,7 +349,7 @@ export const useAppStore = create<AppState>((set, get) => {
               new Point(
                 key,
                 oldPoint.name,
-                oldPoint.groupKey,
+                oldPoint.areaKey,
                 pos.x,
                 pos.y,
                 new Map(oldPoint.objects) // ReadonlyMapから新しいMapを生成
@@ -357,7 +357,7 @@ export const useAppStore = create<AppState>((set, get) => {
             );
           } else if (newWaypoints.has(key)) {
             const oldWaypoint = newWaypoints.get(key)!;
-            newWaypoints.set(key, new Waypoint(key, oldWaypoint.groupKey, pos.x, pos.y));
+            newWaypoints.set(key, new Waypoint(key, oldWaypoint.areaKey, pos.x, pos.y));
           }
         });
 
@@ -379,7 +379,7 @@ export const useAppStore = create<AppState>((set, get) => {
         const newObjects = new Map(targetPoint.objects);
         newObjects.set(targetCategory, new QuantityChange(from, to));
 
-        const newPoint = new Point(targetPoint.key, targetPoint.name, targetPoint.groupKey, targetPoint.x, targetPoint.y, newObjects);
+        const newPoint = new Point(targetPoint.key, targetPoint.name, targetPoint.areaKey, targetPoint.x, targetPoint.y, newObjects);
         newPoints.set(pointKey, newPoint);
 
         return { data: state.data.withNewPoints(newPoints) };

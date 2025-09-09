@@ -47,14 +47,14 @@ export abstract class GraphNode {
   /** 識別子となるユニークなキー */
   readonly key: string;
   /** 所属するグループのキー */
-  readonly groupKey: string;
+  readonly areaKey: string;
 
   x: number;
   y: number;
 
-  protected constructor(key: string, groupKey: string, x: number = 0, y: number = 0) {
+  protected constructor(key: string, areaKey: string, x: number = 0, y: number = 0) {
     this.key = key;
-    this.groupKey = groupKey;
+    this.areaKey = areaKey;
     this.x = x;
     this.y = y;
   }
@@ -72,8 +72,8 @@ export class Point extends GraphNode {
   /** この拠点で数量が変化する物品とその内容のマップ */
   readonly objects: ReadonlyMap<ObjectCategory, QuantityChange>;
 
-  constructor(key: string, name: string, groupKey: string, x: number = 0, y: number = 0, objects: Map<ObjectCategory, QuantityChange>) {
-    super(key, groupKey, x, y);
+  constructor(key: string, name: string, areaKey: string, x: number = 0, y: number = 0, objects: Map<ObjectCategory, QuantityChange>) {
+    super(key, areaKey, x, y);
     this.name = name;
     this.objects = objects;
   }
@@ -86,9 +86,9 @@ export class Point extends GraphNode {
  * (Paths.xml -> <Waypoint>)
  */
 export class Waypoint extends GraphNode {
-  // WaypointはKeyとGroupKey以外の固有情報を持ちません
-  constructor(key: string, groupKey: string, x: number = 0, y: number = 0) {
-    super(key, groupKey, x, y);
+  // WaypointはKeyとAreaKey以外の固有情報を持ちません
+  constructor(key: string, areaKey: string, x: number = 0, y: number = 0) {
+    super(key, areaKey, x, y);
   }
 }
 
@@ -96,9 +96,9 @@ export class Waypoint extends GraphNode {
 
 /**
  * 拠点や経由地をまとめる「グループ」を表します。
- * (Groups.xml -> <ObjectGroup>)
+ * (Areas.xml -> <ObjectArea>)
  */
-export class Group {
+export class Area {
   /** 識別子となるユニークなキー */
   readonly key: string;
   /** グループの表示名 */

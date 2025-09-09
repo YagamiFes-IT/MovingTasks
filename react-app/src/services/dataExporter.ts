@@ -3,16 +3,16 @@
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import type { Data } from "./dataLoader";
-import type { Group, ObjectCategory, Path, Point, Waypoint, Route, Task } from "../types/entities";
+import type { Area, ObjectCategory, Path, Point, Waypoint, Route, Task } from "../types/entities";
 
 // --- XML生成関数群 ---
 
-function generateGroupsXml(groups: ReadonlyMap<string, Group>): string {
-  const groupEntries = Array.from(groups.values())
-    .map((g) => `    <ObjectGroup Key="${g.key}" Name="${g.name}" Description="${g.description}" />`)
+function generateAreasXml(areas: ReadonlyMap<string, Area>): string {
+  const areaEntries = Array.from(areas.values())
+    .map((g) => `    <ObjectArea Key="${g.key}" Name="${g.name}" Description="${g.description}" />`)
     .join("\n");
 
-  return `<GroupCollection>\n  <Groups>\n${groupEntries}\n  </Groups>\n</GroupCollection>`;
+  return `<AreaCollection>\n  <Areas>\n${areaEntries}\n  </Areas>\n</AreaCollection>`;
 }
 
 function generateObjectsXml(categories: ReadonlyMap<string, ObjectCategory>): string {
@@ -25,7 +25,7 @@ function generateObjectsXml(categories: ReadonlyMap<string, ObjectCategory>): st
 
 function generatePathsXml(paths: ReadonlyMap<string, Path>, waypoints: ReadonlyMap<string, Waypoint>): string {
   const waypointEntries = Array.from(waypoints.values())
-    .map((w) => `    <Waypoint Key="${w.key}" GroupKey="${w.groupKey}" x="${w.x}" y="${w.y}" />`)
+    .map((w) => `    <Waypoint Key="${w.key}" AreaKey="${w.areaKey}" x="${w.x}" y="${w.y}" />`)
     .join("\n");
 
   const pathEntries = Array.from(paths.values())
@@ -44,7 +44,7 @@ function generatePointXml(point: Point): string {
     .map(([category, change]) => `    <Object CategoryKey="${category.key}" From="${change.fromAmount}" To="${change.toAmount}" />`)
     .join("\n");
 
-  return `<Point GroupKey="${point.groupKey}" x="${point.x}" y="${point.y}">\n  <Key>${point.key}</Key>\n  <Name>${point.name}</Name>\n  <Objects>\n${objectEntries}\n  </Objects>\n</Point>`;
+  return `<Point AreaKey="${point.areaKey}" x="${point.x}" y="${point.y}">\n  <Key>${point.key}</Key>\n  <Name>${point.name}</Name>\n  <Objects>\n${objectEntries}\n  </Objects>\n</Point>`;
 }
 
 function generateRoutesXml(routes: ReadonlyMap<string, Route>): string {
@@ -108,14 +108,14 @@ export async function exportDataToZip(data: Data, fileName: string = "exported_d
   const zip = new JSZip();
 
   // 各XMLファイルの文字列を生成
-  const groupsXml = generateGroupsXml(data.groups);
+  const areasXml = generateAreasXml(data.areas);
   const objectsXml = generateObjectsXml(data.objectCategories);
   const pathsXml = generatePathsXml(data.paths, data.waypoints);
   const routesXml = generateRoutesXml(data.routes);
   const tasksXml = generateTasksXml(data.tasks);
 
   // メインのXMLファイルをZIPに追加
-  zip.file("Groups.xml", groupsXml);
+  zip.file("Areas.xml", areasXml);
   zip.file("Objects.xml", objectsXml);
   zip.file("Paths.xml", pathsXml);
   zip.file("Routes.xml", routesXml);

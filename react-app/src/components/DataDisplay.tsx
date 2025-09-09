@@ -51,8 +51,8 @@ export const DataDisplay: React.FC<{ data: Data }> = ({ data }) => {
         </table>
       </CollapsibleSection>
 
-      {/* ★ Groups Section (テーブル形式に) */}
-      <CollapsibleSection title="Groups" count={data.groups.size}>
+      {/* ★ Areas Section (テーブル形式に) */}
+      <CollapsibleSection title="Areas" count={data.areas.size}>
         <table className="data-table">
           <thead>
             <tr>
@@ -62,13 +62,13 @@ export const DataDisplay: React.FC<{ data: Data }> = ({ data }) => {
             </tr>
           </thead>
           <tbody>
-            {Array.from(data.groups.values()).map((group) => (
-              <tr key={group.key}>
-                <td>{group.name}</td>
+            {Array.from(data.areas.values()).map((area) => (
+              <tr key={area.key}>
+                <td>{area.name}</td>
                 <td>
-                  <code>{group.key}</code>
+                  <code>{area.key}</code>
                 </td>
-                <td>{group.description}</td>
+                <td>{area.description}</td>
               </tr>
             ))}
           </tbody>
@@ -83,7 +83,7 @@ export const DataDisplay: React.FC<{ data: Data }> = ({ data }) => {
               <th>Key</th>
               <th>Type</th>
               <th>Name</th>
-              <th>Group</th>
+              <th>Area</th>
             </tr>
           </thead>
           <tbody>
@@ -95,7 +95,7 @@ export const DataDisplay: React.FC<{ data: Data }> = ({ data }) => {
                 <td>{data.points.has(node.key) ? "Point" : "Waypoint"}</td>
                 <td>{"name" in node ? node.name : "-"}</td>
                 <td>
-                  <code>{node.groupKey}</code>
+                  <code>{node.areaKey}</code>
                 </td>
               </tr>
             ))}

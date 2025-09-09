@@ -9,7 +9,7 @@ import {
   GraphNode,
   Point,
   Waypoint,
-  Group,
+  Area,
   Path,
   Route,
   Task,
@@ -18,7 +18,7 @@ import { FileFormatError, parseXml, findXmlElement, toInt, toBool } from "../uti
 
 // --- 定数定義 ---
 const DIR_POINTS = "Points/";
-const FILENAME_GROUPS = "Groups.xml";
+const FILENAME_GROUPS = "Areas.xml";
 const FILENAME_OBJECTS = "Objects.xml";
 const FILENAME_PATHS = "Paths.xml";
 const FILENAME_ROUTES = "Routes.xml"; // ファイル名を定数化
@@ -31,7 +31,7 @@ type PathKey = string;
  */
 export class Data {
   public readonly objectCategories: ReadonlyMap<string, ObjectCategory>;
-  public readonly groups: ReadonlyMap<string, Group>;
+  public readonly areas: ReadonlyMap<string, Area>;
   public readonly points: ReadonlyMap<string, Point>;
   public readonly waypoints: ReadonlyMap<string, Waypoint>;
   public readonly paths: ReadonlyMap<PathKey, Path>;
@@ -40,7 +40,7 @@ export class Data {
 
   constructor(
     objectCategories: ReadonlyMap<string, ObjectCategory>,
-    groups: ReadonlyMap<string, Group>,
+    areas: ReadonlyMap<string, Area>,
     points: ReadonlyMap<string, Point>,
     waypoints: ReadonlyMap<string, Waypoint>,
     paths: ReadonlyMap<string, Path>,
@@ -48,7 +48,7 @@ export class Data {
     tasks: ReadonlyMap<string, Task> = new Map()
   ) {
     this.objectCategories = objectCategories;
-    this.groups = groups;
+    this.areas = areas;
     this.points = points;
     this.waypoints = waypoints;
     this.paths = paths;
@@ -57,31 +57,31 @@ export class Data {
   }
 
   public withNewObjectCategories(newMap: ReadonlyMap<string, ObjectCategory>): Data {
-    return new Data(newMap, this.groups, this.points, this.waypoints, this.paths, this.routes, this.tasks);
+    return new Data(newMap, this.areas, this.points, this.waypoints, this.paths, this.routes, this.tasks);
   }
 
-  public withNewGroups(newMap: ReadonlyMap<string, Group>): Data {
+  public withNewAreas(newMap: ReadonlyMap<string, Area>): Data {
     return new Data(this.objectCategories, newMap, this.points, this.waypoints, this.paths, this.routes, this.tasks);
   }
 
   public withNewPoints(newMap: ReadonlyMap<string, Point>): Data {
-    return new Data(this.objectCategories, this.groups, newMap, this.waypoints, this.paths, this.routes, this.tasks);
+    return new Data(this.objectCategories, this.areas, newMap, this.waypoints, this.paths, this.routes, this.tasks);
   }
 
   public withNewWaypoints(newMap: ReadonlyMap<string, Waypoint>): Data {
-    return new Data(this.objectCategories, this.groups, this.points, newMap, this.paths, this.routes, this.tasks);
+    return new Data(this.objectCategories, this.areas, this.points, newMap, this.paths, this.routes, this.tasks);
   }
 
   public withNewPaths(newMap: ReadonlyMap<string, Path>): Data {
-    return new Data(this.objectCategories, this.groups, this.points, this.waypoints, newMap, this.routes, this.tasks);
+    return new Data(this.objectCategories, this.areas, this.points, this.waypoints, newMap, this.routes, this.tasks);
   }
 
   public withNewRoutes(newMap: ReadonlyMap<string, Route>): Data {
-    return new Data(this.objectCategories, this.groups, this.points, this.waypoints, this.paths, newMap, this.tasks);
+    return new Data(this.objectCategories, this.areas, this.points, this.waypoints, this.paths, newMap, this.tasks);
   }
 
   public withNewTasks(newMap: ReadonlyMap<string, Task>): Data {
-    return new Data(this.objectCategories, this.groups, this.points, this.waypoints, this.paths, this.routes, newMap);
+    return new Data(this.objectCategories, this.areas, this.points, this.waypoints, this.paths, this.routes, newMap);
   }
 
   // Dataクラスの中に追加
@@ -216,34 +216,34 @@ async function parseRoutesXml(zip: JSZip, basePath: string): Promise<Map<string,
 }
 
 /**
- * Groups.xmlを解析し、GroupオブジェクトのMapを生成する。
+ * Areas.xmlを解析し、AreaオブジェクトのMapを生成する。
  * @param zip JSZipのインスタンス
  * @param basePath ZIPファイル内のルートパス
- * @returns 解析されたGroupのMap
+ * @returns 解析されたAreaのMap
  * @throws {FileFormatError} 必須ファイルが見つからない場合にエラーを投げる
  */
-async function parseGroupsXml(zip: JSZip, basePath: string): Promise<Map<string, Group>> {
-  const groupsFile = zip.file(basePath + FILENAME_GROUPS);
-  if (!groupsFile) {
+async function parseAreasXml(zip: JSZip, basePath: string): Promise<Map<string, Area>> {
+  const areasFile = zip.file(basePath + FILENAME_GROUPS);
+  if (!areasFile) {
     throw new FileFormatError(FILENAME_GROUPS, "ファイルが見つかりません。");
   }
 
-  const groups = new Map<string, Group>();
-  const groupsXmlText = await groupsFile.async("string");
-  const groupsRoot = parseXml(groupsXmlText, "GroupCollection", FILENAME_GROUPS);
+  const areas = new Map<string, Area>();
+  const areasXmlText = await areasFile.async("string");
+  const areasRoot = parseXml(areasXmlText, "AreaCollection", FILENAME_GROUPS);
 
-  findXmlElement(groupsRoot, "Groups")
-    .querySelectorAll("ObjectGroup")
+  findXmlElement(areasRoot, "Areas")
+    .querySelectorAll("ObjectArea")
     .forEach((el) => {
       const key = el.getAttribute("Key");
       const name = el.getAttribute("Name") ?? "名称未設定";
       const description = el.getAttribute("Description") ?? "";
       if (key) {
-        groups.set(key, new Group(key, name, description));
+        areas.set(key, new Area(key, name, description));
       }
     });
 
-  return groups;
+  return areas;
 }
 
 /**
@@ -294,8 +294,8 @@ async function parsePointsXml(zip: JSZip, basePath: string, categories: Readonly
 
     const key = pointRoot.querySelector("Key")?.textContent;
     const name = pointRoot.querySelector("Name")?.textContent ?? "名称未設定";
-    const groupKey = pointRoot.getAttribute("GroupKey");
-    if (!key || !groupKey) continue;
+    const areaKey = pointRoot.getAttribute("AreaKey");
+    if (!key || !areaKey) continue;
 
     const x = toInt(pointRoot.getAttribute("x"), 0, entryName);
     const y = toInt(pointRoot.getAttribute("y"), 0, entryName);
@@ -314,7 +314,7 @@ async function parsePointsXml(zip: JSZip, basePath: string, categories: Readonly
         objects.set(category, new QuantityChange(fromAmount, toAmount));
       });
 
-    points.set(key, new Point(key, name, groupKey, x, y, objects));
+    points.set(key, new Point(key, name, areaKey, x, y, objects));
   }
 
   return points;
@@ -332,30 +332,30 @@ function parseWaypoints(pathsRoot: Element): Map<string, Waypoint> {
     .querySelectorAll("Waypoint")
     .forEach((el) => {
       const key = el.getAttribute("Key");
-      const groupKey = el.getAttribute("GroupKey");
-      if (!key || !groupKey) return;
+      const areaKey = el.getAttribute("AreaKey");
+      if (!key || !areaKey) return;
 
       const x = toInt(el.getAttribute("x"), 0, FILENAME_PATHS);
       const y = toInt(el.getAttribute("y"), 0, FILENAME_PATHS);
-      waypoints.set(key, new Waypoint(key, groupKey, x, y));
+      waypoints.set(key, new Waypoint(key, areaKey, x, y));
     });
 
   return waypoints;
 }
 
 /**
- * 読み込まれた全ノードを、所属するGroupオブジェクトに登録する。
- * @param groups GroupのMap (このオブジェクトは関数内で変更されます)
+ * 読み込まれた全ノードを、所属するAreaオブジェクトに登録する。
+ * @param areas AreaのMap (このオブジェクトは関数内で変更されます)
  * @param points PointのMap
  * @param waypoints WaypointのMap
  */
-function linkNodesToGroups(groups: Map<string, Group>, points: ReadonlyMap<string, Point>, waypoints: ReadonlyMap<string, Waypoint>): void {
+function linkNodesToAreas(areas: Map<string, Area>, points: ReadonlyMap<string, Point>, waypoints: ReadonlyMap<string, Waypoint>): void {
   const allGraphNodes: ReadonlyMap<string, GraphNode> = new Map([...points, ...waypoints]);
 
   allGraphNodes.forEach((node) => {
-    const group = groups.get(node.groupKey);
-    // GroupクラスのGraphNodesプロパティがミュータブル（書き換え可能）である前提
-    group?.GraphNodes.push(node);
+    const area = areas.get(node.areaKey);
+    // AreaクラスのGraphNodesプロパティがミュータブル（書き換え可能）である前提
+    area?.GraphNodes.push(node);
   });
 }
 
@@ -418,7 +418,7 @@ export async function loadDataFromZip(zipFile: File): Promise<Data> {
   }
 
   // --- 2. 依存関係のない基本データを並列で解析 ---
-  const [groups, categories] = await Promise.all([parseGroupsXml(zip, basePath), parseObjectCategoriesXml(zip, basePath)]);
+  const [areas, categories] = await Promise.all([parseAreasXml(zip, basePath), parseObjectCategoriesXml(zip, basePath)]);
 
   // --- 3. 依存関係のあるデータを順次解析 ---
   const points = await parsePointsXml(zip, basePath, categories);
@@ -433,7 +433,7 @@ export async function loadDataFromZip(zipFile: File): Promise<Data> {
   const paths = parsePaths(pathsRoot, allGraphNodes);
 
   // --- 4. 読み込んだデータ同士の紐付け（後処理） ---
-  linkNodesToGroups(groups, points, waypoints);
+  linkNodesToAreas(areas, points, waypoints);
 
   // ★ 1. オプショナルなデータ(RoutesとTasks)を並列で解析 ---
   const [routes, tasks] = await Promise.all([
@@ -442,5 +442,5 @@ export async function loadDataFromZip(zipFile: File): Promise<Data> {
   ]);
 
   // ★ 2. 最終的なDataオブジェクトにtasksを追加して返す ---
-  return new Data(categories, groups, points, waypoints, paths, routes, tasks);
+  return new Data(categories, areas, points, waypoints, paths, routes, tasks);
 }

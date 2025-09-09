@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useAppStore } from "../../store/dataStore";
-import { GraphNode, Group } from "../../types/entities";
+import { GraphNode, Area } from "../../types/entities";
 import { EditNodeModal } from "./EditNodeModal";
-import { EditGroupModal } from "./EditGroupModal";
+import { EditAreaModal } from "./EditAreaModal";
 
 interface NodesPanelProps {
   selectedNodeKey: string | null;
@@ -13,87 +13,87 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
   // --- ストアから必要なStateとアクションを取得 ---
   const data = useAppStore((state) => state.data);
   const addNode = useAppStore((state) => state.addNode);
-  const addGroup = useAppStore((state) => state.addGroup);
+  const addArea = useAppStore((state) => state.addArea);
   const updateNode = useAppStore((state) => state.updateNode);
   const deleteNodes = useAppStore((state) => state.deleteNodes);
-  const updateGroup = useAppStore((state) => state.updateGroup);
-  const deleteGroup = useAppStore((state) => state.deleteGroup);
+  const updateArea = useAppStore((state) => state.updateArea);
+  const deleteArea = useAppStore((state) => state.deleteArea);
 
   // --- UI表示状態の管理 ---
-  const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
+  const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [isAddNodeOpen, setIsAddNodeOpen] = useState(false);
-  const [isGroupListOpen, setIsGroupListOpen] = useState(true);
+  const [isAreaListOpen, setIsAreaListOpen] = useState(true);
   const [isNodeListOpen, setIsNodeListOpen] = useState(true);
 
   // --- グループ追加フォーム用のState ---
-  const [newGroupKey, setNewGroupKey] = useState("");
-  const [newGroupName, setNewGroupName] = useState("");
-  const [newGroupDesc, setNewGroupDesc] = useState("");
+  const [newAreaKey, setNewAreaKey] = useState("");
+  const [newAreaName, setNewAreaName] = useState("");
+  const [newAreaDesc, setNewAreaDesc] = useState("");
 
   // --- ノード追加フォーム用のState ---
   const [newNodeType, setNewNodeType] = useState<"point" | "waypoint">("point");
   const [newNodeKey, setNewNodeKey] = useState("");
-  const [newNodeGroup, setNewNodeGroup] = useState("");
+  const [newNodeArea, setNewNodeArea] = useState("");
   const [newNodeName, setNewNodeName] = useState("");
 
   // --- 編集モーダル用のState ---
   const [isEditNodeModalOpen, setIsEditNodeModalOpen] = useState(false);
   const [editingNode, setEditingNode] = useState<GraphNode | null>(null);
-  const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [isEditAreaModalOpen, setIsEditAreaModalOpen] = useState(false);
+  const [editingArea, setEditingArea] = useState<Area | null>(null);
 
   // --- 表示用データのメモ化 ---
   const sortedNodes = useMemo(() => {
     if (!data) return [];
     const allNodes = [...data.points.values(), ...data.waypoints.values()];
-    return allNodes.sort((nodeA, nodeB) => (nodeA.groupKey + nodeA.key).localeCompare(nodeB.groupKey + nodeB.key));
+    return allNodes.sort((nodeA, nodeB) => (nodeA.areaKey + nodeA.key).localeCompare(nodeB.areaKey + nodeB.key));
   }, [data]);
 
-  const allGroups = useMemo(() => {
+  const allAreas = useMemo(() => {
     if (!data) return [];
-    return Array.from(data.groups.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(data.areas.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [data]);
 
   // --- イベントハンドラ ---
-  const handleAddGroup = () => {
-    if (!newGroupKey.trim() || !newGroupName.trim()) {
-      alert("Group KeyとNameは必須です。");
+  const handleAddArea = () => {
+    if (!newAreaKey.trim() || !newAreaName.trim()) {
+      alert("Area KeyとNameは必須です。");
       return;
     }
-    addGroup(newGroupKey.trim(), newGroupName.trim(), newGroupDesc.trim());
-    setNewGroupKey("");
-    setNewGroupName("");
-    setNewGroupDesc("");
+    addArea(newAreaKey.trim(), newAreaName.trim(), newAreaDesc.trim());
+    setNewAreaKey("");
+    setNewAreaName("");
+    setNewAreaDesc("");
   };
 
   const handleAddNode = () => {
-    if (!newNodeKey.trim() || !newNodeGroup) {
-      alert("Groupの選択とNode Keyの入力は必須です。");
+    if (!newNodeKey.trim() || !newNodeArea) {
+      alert("Areaの選択とNode Keyの入力は必須です。");
       return;
     }
-    addNode(newNodeType, newNodeKey.trim(), newNodeGroup, newNodeName.trim());
+    addNode(newNodeType, newNodeKey.trim(), newNodeArea, newNodeName.trim());
     setNewNodeKey("");
     setNewNodeName("");
   };
 
-  const handleOpenEditGroupModal = (group: Group) => {
-    setEditingGroup(group);
-    setIsEditGroupModalOpen(true);
+  const handleOpenEditAreaModal = (area: Area) => {
+    setEditingArea(area);
+    setIsEditAreaModalOpen(true);
   };
 
-  const handleSaveGroup = (key: string, newName: string, newDescription: string) => {
-    updateGroup(key, newName, newDescription);
-    setIsEditGroupModalOpen(false);
-    setEditingGroup(null);
+  const handleSaveArea = (key: string, newName: string, newDescription: string) => {
+    updateArea(key, newName, newDescription);
+    setIsEditAreaModalOpen(false);
+    setEditingArea(null);
   };
 
-  const handleDeleteGroup = (groupKey: string) => {
+  const handleDeleteArea = (areaKey: string) => {
     if (!data) return;
-    const groupName = data.groups.get(groupKey)?.name || groupKey;
-    const nodesInGroup = [...data.points.values(), ...data.waypoints.values()].filter((node) => node.groupKey === groupKey);
+    const areaName = data.areas.get(areaKey)?.name || areaKey;
+    const nodesInArea = [...data.points.values(), ...data.waypoints.values()].filter((node) => node.areaKey === areaKey);
     // (警告メッセージ生成のロジックは省略しても良いし、より詳細にしても良い)
-    if (window.confirm(`グループ "${groupName}" を削除しますか？\n関連するノード（${nodesInGroup.length}件）もすべて削除されます。`)) {
-      deleteGroup(groupKey);
+    if (window.confirm(`グループ "${areaName}" を削除しますか？\n関連するノード（${nodesInArea.length}件）もすべて削除されます。`)) {
+      deleteArea(areaKey);
     }
   };
 
@@ -102,8 +102,8 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
     setIsEditNodeModalOpen(true);
   };
 
-  const handleSaveNode = (key: string, newGroup: string, newName?: string) => {
-    updateNode(key, newGroup, newName);
+  const handleSaveNode = (key: string, newArea: string, newName?: string) => {
+    updateNode(key, newArea, newName);
     setIsEditNodeModalOpen(false);
     setEditingNode(null);
   };
@@ -120,15 +120,15 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
     <>
       {/* --- グループ追加フォーム（折りたたみ式） --- */}
       <div className="collapsible-section">
-        <h3 onClick={() => setIsAddGroupOpen(!isAddGroupOpen)}>
-          <span className="triangle">{isAddGroupOpen ? "▼" : "▶"}</span> Add New Group
+        <h3 onClick={() => setIsAddAreaOpen(!isAddAreaOpen)}>
+          <span className="triangle">{isAddAreaOpen ? "▼" : "▶"}</span> Add New Area
         </h3>
-        {isAddGroupOpen && (
+        {isAddAreaOpen && (
           <div className="add-node-form">
-            <input type="text" placeholder="Key (Unique)" value={newGroupKey} onChange={(e) => setNewGroupKey(e.target.value)} />
-            <input type="text" placeholder="Name" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} />
-            <input type="text" placeholder="Description" value={newGroupDesc} onChange={(e) => setNewGroupDesc(e.target.value)} />
-            <button onClick={handleAddGroup}>Add Group</button>
+            <input type="text" placeholder="Key (Unique)" value={newAreaKey} onChange={(e) => setNewAreaKey(e.target.value)} />
+            <input type="text" placeholder="Name" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} />
+            <input type="text" placeholder="Description" value={newAreaDesc} onChange={(e) => setNewAreaDesc(e.target.value)} />
+            <button onClick={handleAddArea}>Add Area</button>
           </div>
         )}
       </div>
@@ -140,14 +140,14 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
         </h3>
         {isAddNodeOpen && (
           <div className="add-node-form">
-            <select value={newNodeGroup} onChange={(e) => setNewNodeGroup(e.target.value)}>
+            <select value={newNodeArea} onChange={(e) => setNewNodeArea(e.target.value)}>
               <option value="" disabled>
                 {" "}
-                -- Select a Group --{" "}
+                -- Select a Area --{" "}
               </option>
-              {allGroups.map((group) => (
-                <option key={group.key} value={group.key}>
-                  {group.name} ({group.key})
+              {allAreas.map((area) => (
+                <option key={area.key} value={area.key}>
+                  {area.name} ({area.key})
                 </option>
               ))}
             </select>
@@ -164,10 +164,10 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
 
       {/* --- グループ一覧 --- */}
       <div className="collapsible-section">
-        <h3 onClick={() => setIsGroupListOpen(!isGroupListOpen)}>
-          <span className="triangle">{isGroupListOpen ? "▼" : "▶"}</span> Groups
+        <h3 onClick={() => setIsAreaListOpen(!isAreaListOpen)}>
+          <span className="triangle">{isAreaListOpen ? "▼" : "▶"}</span> Areas
         </h3>
-        {isGroupListOpen && (
+        {isAreaListOpen && (
           <table>
             <thead>
               <tr>
@@ -177,13 +177,13 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
               </tr>
             </thead>
             <tbody>
-              {allGroups.map((group) => (
-                <tr key={group.key}>
-                  <td>{group.name}</td>
-                  <td>{group.key}</td>
+              {allAreas.map((area) => (
+                <tr key={area.key}>
+                  <td>{area.name}</td>
+                  <td>{area.key}</td>
                   <td>
-                    <button onClick={() => handleOpenEditGroupModal(group)}>Edit</button>
-                    <button onClick={() => handleDeleteGroup(group.key)} className="delete-button">
+                    <button onClick={() => handleOpenEditAreaModal(area)}>Edit</button>
+                    <button onClick={() => handleDeleteArea(area.key)} className="delete-button">
                       Delete
                     </button>
                   </td>
@@ -205,7 +205,7 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
               <tr>
                 <th>Type</th>
                 <th>Key</th>
-                <th>Group</th>
+                <th>Area</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -214,7 +214,7 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
                 <tr key={node.key} className={node.key === selectedNodeKey ? "selected-row" : ""} onClick={() => onNodeSelect(node.key)}>
                   <td>{data.waypoints.has(node.key) ? "Waypoint" : "Point"}</td>
                   <td>{node.key}</td>
-                  <td>{node.groupKey}</td>
+                  <td>{node.areaKey}</td>
                   <td>
                     <button onClick={() => handleOpenEditModal(node)}>Edit</button>
                     <button onClick={() => handleDeleteNode(node.key)} className="delete-button">
@@ -229,8 +229,8 @@ export function NodesPanel({ selectedNodeKey, onNodeSelect }: NodesPanelProps) {
       </div>
 
       {/* --- モーダルコンポーネント --- */}
-      <EditNodeModal isOpen={isEditNodeModalOpen} node={editingNode} onClose={() => setIsEditNodeModalOpen(false)} onSave={handleSaveNode} groups={allGroups} />
-      <EditGroupModal isOpen={isEditGroupModalOpen} group={editingGroup} onClose={() => setIsEditGroupModalOpen(false)} onSave={handleSaveGroup} />
+      <EditNodeModal isOpen={isEditNodeModalOpen} node={editingNode} onClose={() => setIsEditNodeModalOpen(false)} onSave={handleSaveNode} areas={allAreas} />
+      <EditAreaModal isOpen={isEditAreaModalOpen} area={editingArea} onClose={() => setIsEditAreaModalOpen(false)} onSave={handleSaveArea} />
     </>
   );
 }
